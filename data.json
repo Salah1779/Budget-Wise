@@ -1,0 +1,43 @@
+[
+    {
+      "id": "1",
+      "category": "entertainemet",
+      "amount": 10400,
+      "currency": "MAD",
+      "date": "Aug 28",
+      "method": "cash"
+    },
+    {
+      "id": "2",
+      "category": "food",
+      "amount": 1560,
+      "currency": "MAD",
+      "date": "Aug 28",
+      "method": "cash"
+    },
+    {
+      "id": "3",
+      "category": "financial",
+      "amount": 10000,
+      "currency": "MAD",
+      "date": "Aug 28",
+      "method": "cash"
+    },
+    {
+      "id": "4",
+      "category": "transportation",
+      "amount": 300,
+      "currency": "MAD",
+      "date": "Aug 29",
+      "method": "card"
+    },
+    {
+      "id": "5",
+      "category": "entertainment",
+      "amount": 500,
+      "currency": "MAD",
+      "date": "Aug 30",
+      "method": "cash"
+    }
+  ]
+  
