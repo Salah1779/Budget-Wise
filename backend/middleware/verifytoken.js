@@ -15,7 +15,7 @@ const verifyToken = (req, res, next) => {
   jwt.verify(token, JWT_SECRET, (err, user) => {
     if (err) {
       return res.status(403).json({ error: 'Invalid token' });
-      console.log('Invalid token' )
+     
     }
 
     // Check if token is expiring soon (e.g., within 15 minutes)

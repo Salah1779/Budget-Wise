@@ -1,0 +1,456 @@
+import React, { useContext, useEffect, useState, useCallback ,useMemo} from 'react';
+import {
+  Button,
+  StyleSheet,
+  Text,
+  View,
+  useWindowDimensions,
+  Image,
+  TouchableOpacity,
+  FlatList,
+  Platform,
+  Switch,
+  TextInput,
+  Dimensions,
+  Alert,
+  ActivityIndicator,
+  Animated,
+  LayoutAnimation
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
+import { Colors } from '../constants/Colors';
+import LinearGradient from 'react-native-linear-gradient';
+import { ThemeContext } from '../context/ThemeContext';
+import CustomizedStatusBar from '../components/CustomizedStatusBar';
+import BottomSheetModal from '../components/BottomSheetModal';
+import CustomModal from '../components/CustomModal';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { getData, storeData } from '../helpers/AsynchOperation';
+import Icon from 'react-native-vector-icons/FontAwesome';
+import Ionicons from 'react-native-vector-icons/Ionicons';
+import ExpencesList from '../components/ExpencesList';
+import Calculator from '../components/Calculator';
+import { clamp } from 'react-native-reanimated';
+import ActionButton from '../components/ActionButton';
+import { Picker } from '@react-native-picker/picker';
+import CalculatorModal from '../components/CalculatorModal';
+
+
+const { width, height } = Dimensions.get('window');
+
+
+
+const ExpenceScreen = () => {
+  const navigation = useNavigation();
+  const { theme, currency,
+        expenceList,setExpenceList,
+        filteredList,setFilteredList,
+        isSearching,setIsSearching,
+        result,setResult,
+        showCalculator,setShowCalculator,
+        searchQuery,setSearchQuery ,
+        expression,setExpression
+        } = useContext(ThemeContext);
+ // const [total, setTotal] = useState(0);
+  const [selectedCategory, setSelectedCategory] = useState('All');
+  const [loading, setLoading] = useState(true);
+  const [isModalVisible, setIsModalVisible] = useState(false);
+  const [category, setCategory] = useState('');
+  const [article, setArticle] = useState('');
+  const [loadingAdd, setLoadingAdd] = useState(false);
+  
+
+//categories filter
+  const categories = [
+    'All',
+    'Food & Drinks',
+    'Vehicle',
+    'Housing',
+    'Transportation',
+    'Health',
+    'Entertainment',
+    'Investment',
+    'Other',
+    'Financial Expenses',
+    'Shopping'
+  ];
+
+ 
+  
+  closeModal = () => {
+    setIsModalVisible(false);
+  }
+
+  openModal = () => {
+    setIsModalVisible(true);
+  }
+  const addExpenceToDB = async () => {
+    if (category !== '' && result !== 0 && article.trim() !== '') {
+      try {
+        const userToken = await getData('userToken');
+        setLoadingAdd(true);
+  
+        const res = await fetch('http://192.168.11.102:5000/api/add-expense', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${userToken.token}`,
+          },
+          body: JSON.stringify({
+            category: category,
+            amount: result,
+            article: article,
+          }),
+        });
+  
+        const data = await res.json();
+        
+        if (res.status === 200) {
+          // Success actions
+          setCategory('');
+          setResult(0);
+          setArticle('');
+          closeModal();
+          Alert.alert('Success', 'Expense added successfully');
+          await storeData('userToken', data.data);
+        } else {
+          // Error from server response
+          Alert.alert('Error', data.error || 'Something went wrong');
+        }
+      } catch (error) {
+        // Catch any network or unexpected error
+        console.error('Error adding expense:', error);
+        Alert.alert('Error', 'Failed to add expense. Please try again.');
+      } finally {
+        // Loading state reset
+        setLoadingAdd(false);
+      }
+    } else {
+      // Validation feedback if fields are empty
+      Alert.alert('Validation Error', 'Please fill all the required fields.');
+    }
+  };
+  
+  
+  const fetchExpences = async (limit = null) => {
+    try {
+      const Client = await getData('userToken');
+      const res = await fetch('http://192.168.11.102:5000/api/expence-list', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${Client.token}`
+        },
+        body: JSON.stringify({ limited: limit }),
+      });
+
+      const answer = await res.json();
+      if (!res.ok) {
+        throw new Error(answer.error || 'Network response was not ok');
+      }
+
+      await storeData('userToken', answer.user);
+      setExpenceList(answer.data || []);
+      setFilteredList(answer.data || []);
+
+    } catch (error) {
+      console.error('Error fetching expences:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const calculateTotal = () => {
+    let total = 0;
+    filteredList.forEach(element => {
+      total += element.expence_amount;
+    });
+    return total;
+  };
+
+  useFocusEffect(
+    useCallback(() => {
+      setSelectedCategory('All');
+      setSearchQuery('');
+      fetchExpences();
+    }, [])
+  );
+
+  const filterByCategory = (category = 'All') => {
+    if (category === 'All') {
+      setFilteredList(expenceList);
+    } else {
+      const filtered = expenceList.filter(element => element.cat === category);
+      setFilteredList(filtered);
+    }
+  };
+
+ const options = [
+        {
+            id: 1,
+            icon: 'account-outline',
+            action: () => setIsModalVisible(true),
+            translation: 'top' /* left, middle, top */
+        },
+        {
+            id: 2,
+            icon: 'comment-text-multiple-outline',
+            action: () => console.log('presionando el boton 2'),
+            translation: 'middle' /* left, middle, top */
+        },
+        {
+          id: 3,
+          icon: 'comment-text-multiple-outline',
+          action: () => console.log('presionando el boton 2'),
+          translation: 'left' /* left, middle, top */
+      },
+      
+    ];
+
+
+
+  const renderItem = ({ item }) => {
+    const isSelected = item === selectedCategory;
+
+    return (
+      <TouchableOpacity onPress={() => { setSelectedCategory(item); filterByCategory(item); }} activeOpacity={0.7}>
+        <Animated.View
+          style={{
+            borderRadius: 10,
+            backgroundColor: isSelected ? '#030e4f' : '#FADA5E', // Background color of the item
+            paddingHorizontal: 10,
+            justifyContent: 'center',
+            height: clamp(width > 400 ? 50 : 30, 50, 30),
+          }}
+        >
+          <Text
+            style={{
+              fontSize: width > 400 ? 15 : 14, // Adjust font size based on screen width
+              color: isSelected ? '#f49f1c' : '#030e4f', // Change text color based on selection
+              textAlign: 'center',
+            }}
+          >
+            {item}
+          </Text>
+        </Animated.View>
+      </TouchableOpacity>
+    );
+  };
+
+  return (
+    <>
+      <CustomizedStatusBar
+        backgroundColor={Colors[theme].background}
+        barStyle={theme === 'light' ? 'dark-content' : 'light-content'}
+        translucent
+        hidden={false}
+        animated
+      />
+      <View style={[styles.container, { backgroundColor: Colors[theme].background }]}>
+        <View style={[styles.TotalContainer, { backgroundColor: theme === 'light' ? 'white' : 'lightblue' }]}>
+          <Text style={[styles.total, { color: Colors[theme].header }]}>{calculateTotal()} {currency}</Text>
+        </View>
+        <View>
+          <FlatList
+            style={styles.filterList}
+            data={categories}
+            renderItem={renderItem}
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            ItemSeparatorComponent={() => <View style={{ width: 7 }} />}
+            ListHeaderComponent={() => <View style={{ width: 7 }} />}
+          />
+        </View>
+
+        {loading ? <ActivityIndicator style={styles.loading} animating={true} size='large' color={Colors[theme].secondaryButton} />
+          : <ExpencesList
+            expenceData={filteredList}
+            contentContainerStyle={styles.expenceCardContainer}
+            articleStyle={{ color: theme === 'light' ? 'black' : 'white' }}
+            titleStyle={{ color: theme === 'light' ? 'black' : 'white' }}
+           // refreshFetch={fetchExpences()}
+          />
+        }
+        <ActionButton options={options} />
+
+        <BottomSheetModal isVisible={isModalVisible} onClose={closeModal} SheetHeight={height*0.45}>
+
+            <View style={[{flexDirection:'row-reverse',flex:1,alignItems:'center', justifyContent:'space-between',}]}>
+              <View style={[{width:width*0.4}]}>
+                <Text style={[styles.label,{color:theme==='light'?'#888':'lightgrey',marginBottom:0}]}>Category</Text>
+                <Picker
+                    selectedValue={category}
+                    onValueChange={(value) => setCategory(value)}
+                    style={[styles.picker, { color:theme=='light'?'#004':'lightgrey',  }]}
+                    //itemStyle={pickerItemStyle}
+                    mode="dropdown"
+                    dropdownIconColor={theme === 'light' ? 'lightblue' : 'lightgrey'}
+                    dropdownIconRippleColor={theme === 'light' ? 'lightblue' : 'lightgrey'}
+                    ItemSeparatorComponent={() => <View style={{ height: 1, width: '80%', backgroundColor: 'gray' }} />}
+                    selectionColor={theme === 'light' ? 'lightblue' : 'lightgrey'}
+                >
+                   <Picker.Item label="Select a category" value="" />
+                    {categories.map((category, index) => {
+                      if (index > 0) {
+                        return (
+                          <Picker.Item key={index} label={category} value={category} />
+                        );
+                      }
+                      return null; // Return null if index is 0 or less
+                    })}
+                </Picker>
+              </View>
+              
+              <View  >
+                <Text style={[styles.label,{color:theme==='light'?'#888':'lightgrey'}]}>Amount</Text>
+                <TouchableOpacity activeOpacity={1} onPress={() => {setShowCalculator(true);setExpression( result.toString()==='0'?'':result)}}>
+                  <TextInput
+                    style={[styles.input,{color:theme==='light'?'#004':'lightgrey'}]}
+                    placeholder="Enter expenece amount"
+                    keyboardType="numeric"
+                    placeholderTextColor={theme === 'light' ? 'grey' : 'darkgrey'}
+                    value={result}
+                    editable={false}  
+                  
+                  />
+                </TouchableOpacity>
+              </View>
+             
+
+            </View>
+            <View >
+                <Text style={[styles.label,{color:theme==='light'?'#888':'lightgrey'}]}>Article</Text>
+                
+                  <TextInput
+                    style={[styles.input,{color:theme==='light'?'#004':'lightgrey'}]}
+                    placeholder="set an article..."
+                    placeholderTextColor={theme === 'light' ? 'grey' : 'darkgrey'}
+                    value={article}
+                    onChangeText={(text)=>setArticle(text)}
+                    multiline={true}
+                  />
+                
+              </View>
+
+            
+            <TouchableOpacity style={[styles.button, {backgroundColor:loadingAdd ? 'gray' : Colors[theme].primaryButton},
+               Platform.select({
+              ios: theme === 'light' ? {
+                shadowColor: '#ccc',
+                shadowOffset: { width: 0, height: 2 },
+                shadowOpacity: 0.25,
+                shadowRadius: 3.84,
+              } : {},
+              android: {
+                elevation: theme === 'light' ? 5 : 0,
+              },
+            }),]}
+            onPress={() => {
+                           console.log(result , article , category); 
+                         
+                            addExpenceToDB()
+                            fetchExpences();
+                          
+                            }} >
+                <Text style={styles.buttonText}>Done{' '} {loadingAdd && <ActivityIndicator size="small" color="white" />}</Text>
+            </TouchableOpacity>
+            </BottomSheetModal>
+        
+        <CalculatorModal Style={[{backgroundColor:theme==='light'?'white':'#E5E4E2',}]} />
+       </View>
+
+    </>
+  );
+}
+
+export default ExpenceScreen;
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+  TotalContainer: {
+    width: '85%',
+    borderRadius: width * 0.9,
+    height: '10%',
+    minHeight: 50,
+    justifyContent: 'center',
+    alignSelf: 'center',
+    marginBottom: height * 0.02,
+    shadowColor: '#888',
+    ...Platform.select({
+      ios: {
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.8,
+        shadowRadius: 2,
+      },
+      android: {
+        elevation: 10,
+      }
+    })
+  },
+  total: {
+    textAlign: 'center',
+    fontFamily: 'Poppins-Regular',
+    fontSize: width * 0.12,
+  },
+  expenceCardContainer: {
+    backgroundColor: 'transparent',
+  },
+  filterList: {
+    padding: 4,
+    height: height * 0.07,
+  },
+  loading: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+  },
+  label: {
+    fontStyle: 'italic',
+    fontFamily:'Poppins-Regular',
+    fontWeight: 'bold',
+    letterSpacing: 0.3,
+    marginBottom: 10,
+  },
+  picker: {
+    height: 40,
+    borderColor: 'gray',
+    borderWidth: 1,
+    borderRadius: 5,
+    paddingHorizontal: 10,
+    marginBottom: 10,
+    
+  },
+  input: {
+    height: 40,
+    borderColor: 'gray',
+    borderWidth: 1,
+    borderRadius: 5,
+    paddingHorizontal: 10,
+    marginBottom: 20,
+    
+  },
+  button: {
+   
+    paddingVertical: 13,
+    paddingHorizontal: 32,
+    borderRadius: 20,
+    marginTop:30
+   
+  },
+    
+  buttonText: {
+    fontSize: width>=400?19:17,
+    lineHeight: 21,
+    fontWeight: 'bold',
+    letterSpacing: 0.5,
+    color: 'white',
+    textAlign: 'center',
+    fontFamily: 'Poppins-Regular',
+
+  },
+});

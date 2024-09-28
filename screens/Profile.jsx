@@ -1,12 +1,13 @@
-import React, { useState, useEffect, useContext } from 'react';
+import React, { useState, useEffect, useContext,useCallback } from 'react';
 import { View, Text, Alert, TextInput, TouchableOpacity, Image, ScrollView, StyleSheet, useWindowDimensions } from 'react-native';
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
-import { useNavigation, CommonActions } from '@react-navigation/native';
+import { useNavigation, useFocusEffect,CommonActions } from '@react-navigation/native';
 import { Colors } from '../constants/Colors';
 import { ThemeContext } from '../context/ThemeContext';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getData, storeData } from '../helpers/AsynchOperation';
+import {Picker} from '@react-native-picker/picker';
 
 const Profile = () => {
   const navigation = useNavigation();
@@ -54,7 +55,7 @@ const Profile = () => {
         return;
       }
   
-      const response = await fetch('http://192.168.11.104:4000/api/update-password', {
+      const response = await fetch('http://192.168.11.102:5000/api/update-password', {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -75,7 +76,7 @@ const Profile = () => {
         setErrorConfirmedPass('');
         setErrorNewPass('');
         setErrorPass('');
-        await storeData('hasPass', true);
+        setHasPass(true);
         console.log(data.message)
       } else {
         Alert.alert('Error', data.error );
@@ -91,7 +92,7 @@ const Profile = () => {
   const verifyPassword = async () => {
     try {
       const userToken = await getData('userToken');
-      const response = await fetch('http://192.168.11.104:4000/api/verify-password', {
+      const response = await fetch('http://192.168.11.102:5000/api/verify-password', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -144,7 +145,7 @@ const Profile = () => {
         return;
       }
 
-      const response = await fetch('http://192.168.11.104:4000/api/update-profile', {
+      const response = await fetch('http://192.168.11.102:5000/api/update-profile', {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -162,7 +163,7 @@ const Profile = () => {
       if (response.ok) {
         await storeData('userToken', data);
         setEditLoading(false);
-        navigation.replace('Home');
+        navigation.replace('AppStack');
       } else {
         Alert.alert('Error', data.error || 'An error occurred');
       }
@@ -240,14 +241,48 @@ const Profile = () => {
       }
     };
 
-    const checkHasPassword = async () => {
-      const already = await getData('hasPass');
-      setHasPass(!!already);
-    };
+   
 
     fetchUserToken();
-    checkHasPassword();
+    
   }, []);
+
+
+    
+
+  const checkHasPassword = async () => {
+    try {
+      const userToken = await getData('userToken');
+      const response = await fetch('http://192.168.11.102:5000/api/checkPassword', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email: userToken.user.email }),
+      });
+
+      if (response.ok) {
+        const { hasPassword } = await response.json();
+        console.log('Password status:', hasPassword);
+        setHasPass(hasPassword);
+      } else {
+        console.error('Error fetching password status from API:', response.statusText);
+        setHasPass(false);
+        Alert.alert('Error', 'Something went wrong. Please try again later.');
+      }
+    } catch (error) {
+      console.error('Error checking password from API:', error);
+      setHasPass(false);
+      Alert.alert('Error', 'Something went wrong. Please try again later.');
+    }
+  };
+
+  useFocusEffect(
+    useCallback(() => {
+      checkHasPassword();
+    }, [])
+  );
+
 
   useEffect(() => {
     navigation.setOptions({
@@ -256,8 +291,8 @@ const Profile = () => {
           onPress={handleSave} // Directly reference your handleSave function
           // Adjust styling as needed
         >
-          <Icon name="content-save-edit" size={width>400?28:24} color={Colors[theme].cardBackground}
-          style={{ marginRight: 10 }}/>
+          <Icon name="content-save-edit" size={width>400?28:24} color={theme === 'light' ? '#888' : 'lightgrey'}
+          style={{ marginRight: 20 }}/>
         </TouchableOpacity>
       ),
     });
@@ -339,17 +374,17 @@ const Profile = () => {
 
         <View style={styles.userInfo}>
           <Text style={labelStyle}>Select gender</Text>
-          {/* <Picker
+          <Picker
             selectedValue={gender}
             onValueChange={(itemValue) => setGender(itemValue)}
             style={inputStyle}
             mode="dropdown"
           >
-            <Picker.Item label="None" value="None" />
-            <Picker.Item label="Male" value="male" />
-            <Picker.Item label="Female" value="female" />
-            <Picker.Item label="Other" value="other" />
-          </Picker> */}
+            <Picker.Item label="None" value="N" />
+            <Picker.Item label="Male" value="M" />
+            <Picker.Item label="Female" value="F" />
+           
+          </Picker> 
         </View>
 
         {/* Logout Button */}

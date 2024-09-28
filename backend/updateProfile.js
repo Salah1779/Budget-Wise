@@ -1,8 +1,8 @@
 // routes/userRoutes.js
 const express = require('express');
 const bcrypt = require('bcrypt');
-const connection = require('./connexion'); // Ensure correct path to your MySQL connection
-const verifyToken = require('./middleware/verifytoken'); // Adjust path as needed
+const connection = require('./connexion'); 
+const verifyToken = require('./middleware/verifytoken'); 
 const router = express.Router();
 
 // Update password route with verifyToken middleware
@@ -108,6 +108,34 @@ router.put('/update-profile', verifyToken, async (req, res) => {
     }
   );
 });
+
+
+router.post('/checkPassword', async (req, res) => {
+  const { email } = req.body;
+
+  try {
+    // Query the database to check if the user has a password
+    connection.query('SELECT password FROM users WHERE email = ?', [email], (err, results) => {
+      if (err) {
+        console.error('Error querying the database:', err);
+        return res.status(500).json({ error: 'Internal server error' });
+      }
+
+      if (results.length === 0) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      const hasPassword = results[0].password !== null;
+      return res.json({ hasPassword });
+    });
+  } catch (error) {
+    console.error('Database query error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+module.exports = router;
+
 
   
 module.exports = router;

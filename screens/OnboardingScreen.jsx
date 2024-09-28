@@ -41,7 +41,7 @@ const DoneButton = ({ ...props }) => {
 
 const OnboardingScreen = () => {
   const navigation = useNavigation();
-  const route = useRoute();
+  //const route = useRoute();
   const { theme } = useContext(ThemeContext);
   const { width } = useWindowDimensions();
  
@@ -70,10 +70,8 @@ const OnboardingScreen = () => {
           backgroundColor: Colors[theme].background,
           image: (
             <Image
-              source={{
-                uri: "https://previews.123rf.com/images/irfanfirdaus/irfanfirdaus2003/irfanfirdaus200300016/143492365-vector-illustration-mobile-online-shopping-women-shop-online-with-smartphone-mobile-shopping-concept.jpg",
-              }}
-              style={[styles.image, { width: width * 0.7, height: width * 0.7 }]}
+              source={require('../assets/images/budget-onboarding.png')}         
+              style={[styles.image, { width: width * 0.8, height: width * 0.8 }]}
             />
           ),
           title: (
@@ -91,10 +89,8 @@ const OnboardingScreen = () => {
           backgroundColor: Colors[theme].background,
           image: (
             <Image
-              source={{
-                uri: "https://cdn.dribbble.com/users/1458982/screenshots/4291206/sign-in-dribble.png?compress=1&resize=400x300&vertical=top",
-              }}
-              style={[styles.image, { width: width * 0.7, height: width * 0.7 }]}
+              source={require('../assets/images/analytics-onboarding.png')}
+              style={[styles.image, { width: width * 0.8, height: width * 0.8 }]}
             />
           ),
           title: (
@@ -112,10 +108,8 @@ const OnboardingScreen = () => {
           backgroundColor: Colors[theme].background,
           image: (
             <Image
-              source={{
-                uri: "https://thumbs.dreamstime.com/b/woman-shopping-sales-happy-young-holding-paper-bags-enjoying-126694001.jpg",
-              }}
-              style={[styles.image, { width: width * 0.7, height: width * 0.7 }]}
+              source={require('../assets/images/report-onboarding.png')}
+              style={[styles.image, { width: width * 0.8, height: width * 0.8 }]}
             />
           ),
           title: (
@@ -133,10 +127,8 @@ const OnboardingScreen = () => {
           backgroundColor: Colors[theme].background,
           image: (
             <Image
-              source={{
-                uri: "https://thumbs.dreamstime.com/b/woman-shopping-sales-happy-young-holding-paper-bags-enjoying-126694001.jpg",
-              }}
-              style={[styles.image, { width: width * 0.7, height: width * 0.7 }]}
+              source={require('../assets/images/saving-onboarding.png')}
+              style={[styles.image, { width: width * 0.8, height: width * 0.8 }]}
             />
           ),
           title: (

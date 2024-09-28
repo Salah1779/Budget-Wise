@@ -6,7 +6,7 @@ import { Colors } from '../constants/Colors';
 import TermView from '../components/TermView';
 import SignInButton from '../components/SignInButton';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { storeData } from '../helpers/AsynchOperation';
+import { storeData ,getData} from '../helpers/AsynchOperation';
 import { ThemeContext } from '../context/ThemeContext';
 
 export default function Log() {
@@ -16,8 +16,23 @@ export default function Log() {
   const navigation = useNavigation();
   const [error, setError] = useState();
   const [loading, setLoading] = useState(false);
+  const [finished, setFinished] = useState(false);
   
- 
+  useEffect(() => {
+    const getItemFinish = async () => {
+      try {
+        const launch = await getData("Finish");
+        const valueToStore = launch === null ? false : true;
+        storeData("Finish", valueToStore);
+        setFinished(valueToStore);
+        console.log("Finish", valueToStore);
+      } catch (e) {
+        console.error('Error retrieving Finish:', e);
+      }
+    };
+
+    getItemFinish();
+  }, []);
 
  
  
@@ -54,7 +69,7 @@ export default function Log() {
     try {
       await GoogleSignin.hasPlayServices();
       const user = await GoogleSignin.signIn();
-      //console.log(user);
+     // console.log(user);
       
       // Get access token
       const { accessToken } = await GoogleSignin.getTokens();
@@ -63,7 +78,7 @@ export default function Log() {
       const profilePhotoUrl = await fetchProfilePhoto(accessToken);
       
       // Send user data to server
-      const response = await fetch('http://192.168.11.104:4000/api/google-signup', {
+      const response = await fetch('http://192.168.11.102:5000/api/google-signup', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -75,7 +90,7 @@ export default function Log() {
           image: profilePhotoUrl || 'https://cdn-icons-png.flaticon.com/512/149/149071.png',
         }),
       });
-      
+      console.log('ELAAAACH HAD NA7SSS KAML')
       if (response.ok) {
         const data = await response.json();
         console.log('Response:', data);
@@ -83,7 +98,8 @@ export default function Log() {
           
           await storeData('userToken', data);
           await storeData('googleLogin', 'true');
-          navigation.replace('AppStack');
+          
+         finished===false? navigation.replace('AppStack'): navigation.replace('ChooseCurrency');
         } else {
           console.log('No token received.');
           
@@ -101,7 +117,7 @@ export default function Log() {
     }
   };
   
-
+2
   return (
     <>
     <View style={[ {flex:1, backgroundColor: Colors[theme].secondaryButton }]}>

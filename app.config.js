@@ -16,7 +16,7 @@ export default {
     // jsEngine: "hermes",
     plugins: [
       "@react-native-google-signin/google-signin",
-       "expo-font",
+       "expo-font"
       
 
       ],

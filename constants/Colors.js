@@ -26,6 +26,7 @@ export const Colors = {
     tabBar: '#030e4f', // Dark Blue
     tabBarIcon: '#8cb5f0', // Light Blue
     activeDrawerElem: '#f49f1c', // Orange // Selected tab icon color in light mode
+    modal :'#f5f5f5',
   },
   dark: {
     background: '#001a33', // Very Dark Blue
@@ -43,6 +44,7 @@ export const Colors = {
     tabBar: '#003d79', // Dark Blue
     tabBarIcon: '#8cb5f0', // Light Blue
     activeDrawerElem: '#f49f1c', // Orange
+    modal :'#121212',
   },
   categoryColor: {
     Food: '#FF6F61', // Coral
@@ -50,7 +52,7 @@ export const Colors = {
     Entertainment: '#FFB347', // Saffron
     Health: '#4CAF50',        // Medium Sea Green
     Other: '#FF69B4',         // Hot Pink
-    Vehicle: '#FF4500',       // Orange Red
+    Vehicle: '#BDB2FA',       // Orange Red
     Transportation: '#FFD700', // Gold
     Investment: '#40E0D0',    // Turquoise
     Financial: '#D2691E', // Chocolate

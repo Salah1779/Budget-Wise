@@ -1,4 +1,4 @@
-import React, { useState, useContext } from 'react';
+import React, { useState, useContext,useEffect } from 'react';
 import { 
     View, 
     TextInput,
@@ -11,7 +11,8 @@ import {
     Platform ,
     Image,
     Alert,
-    ActivityIndicator
+    ActivityIndicator,
+    Dimensions,
     }from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {useNavigation } from '@react-navigation/native';
@@ -23,8 +24,9 @@ import { ThemeContext } from '../context/ThemeContext';
 import Ionicon from 'react-native-vector-icons/Ionicons';
 import SimpleLineIcons from 'react-native-vector-icons/SimpleLineIcons';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons'; // Import the icons from MaterialCommunityIcons
-import { storeData } from '../helpers/AsynchOperation';
+import { storeData,getData } from '../helpers/AsynchOperation';
 
+const {width ,height}= Dimensions.get('window');
 const Login = () => {
 const navigation = useNavigation();
 const {width} = useWindowDimensions();
@@ -35,53 +37,83 @@ const {width} = useWindowDimensions();
   const [errorPass, setErrorPass] = useState('');
   const [hiddenPass, setHiddenPass] = useState(true);
   const [loading, setLoading] = useState(false);
+  const [finished, setFinished] = useState(false);
 
+
+  useEffect(() => {
+    const getItemFinish = async () => {
+      try {
+        const launch = await getData("Finish");
+        const valueToStore = launch === null ? false : true;
+        storeData("Finish", valueToStore);
+        setFinished(valueToStore);
+        console.log("Finish", valueToStore);
+      } catch (e) {
+        console.error('Error retrieving Finish:', e);
+      }
+    };
+
+    getItemFinish();
+  }, []);
 
   const handleBlurMail = () => {
     const emailExp = /^\w+[0-9]*([\.-]?\w*[0-9]*)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/;
      (!emailExp.test(email.trim()) && email.trim().length>0 ) ? setErrorMail('*Invalid email'):setErrorMail('');
       
   }
-
   const handleBlurPass = () => {
-    (password.length<6 && password.length>0 )? setErrorPass('*Password must be at least 6 characters'):setErrorPass('');
-}
+    if (password.length < 6 && password.length > 0) {
+      setErrorPass('*Password must be at least 6 characters');
+    } else {
+      setErrorPass('');
+    }
+  };
   
-   
-const handleLogin = async () => {
-   setErrorPass('');
+
+  const handleLogin = async () => {
+    // Reset error messages and set loading
+    setErrorPass('');
+    setErrorMail('');
+    
     if (!email || !password) {
       setLoading(false);
       setErrorMail(email ? '' : '*Required');
       setErrorPass(password ? '' : '*Required');
-      
       return;
     }
+  
     setLoading(true);
+    console.log(email, password);
     try {
-      const response = await fetch('http://192.168.11.104:4000/api/login', {
+      const response = await fetch('http://192.168.11.102:5000/api/login', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ email : email.trim(), password }),
       });
-
+  
+      // Check if the response is OK
       if (response.ok) {
         const data = await response.json();
-        //console.log(data);
-        await storeData('userToken', data);
+        await storeData('userToken', data); // Ensure the correct key for storing token
         await storeData('googleLogin', false);
         setLoading(false);
         navigation.replace('AppStack');
       } else {
-        setErrorPass('*Invalid email or password');
+        // Extract error message from response if available
+        const errorData = await response.json();
+        const errorMessage = errorData.error; // Fallback error message
+        setErrorPass(errorMessage);
+        setLoading(false);
       }
     } catch (error) {
-      Alert.alert('Login failed:', error);
+      // Handle network or unexpected errors
+      setLoading(false);
+      Alert.alert('Login failed', error.message || 'An error occurred. Please try again.');
     }
-    setLoading(false);
   };
+  
 
 const handelerHiddenPass = () => {
   setHiddenPass(!hiddenPass);
@@ -119,7 +151,7 @@ const signinGoogle = async () => {
   try {
     await GoogleSignin.hasPlayServices();
     const user = await GoogleSignin.signIn();
-    console.log(user);
+    //console.log(user);
     
     // Get access token
     const { accessToken } = await GoogleSignin.getTokens();
@@ -128,7 +160,7 @@ const signinGoogle = async () => {
     const profilePhotoUrl = await fetchProfilePhoto(accessToken);
     
     // Send user data to server
-    const response = await fetch('http://192.168.11.104:4000/api/google-signup', {
+    const response = await fetch('http://192.168.11.102:5000/api/google-signup', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -147,7 +179,8 @@ const signinGoogle = async () => {
       if (data.token) {
         console.log('Token:', data.token);
         await AsyncStorage.setItem('userToken', JSON.stringify(data));
-        navigation.replace('AppStack');
+        finished===true? navigation.replace('AppStack') : navigation.replace('ChooseCurrency');
+
       } else {
         console.log('No token received.');
         
@@ -234,6 +267,7 @@ const signinGoogle = async () => {
       <TouchableOpacity style={[styles.button, {backgroundColor:loading ? 'gray' : Colors[theme].primaryButton}]} onPress={handleLogin}>
         <Text style={styles.buttonText}>Sign In{' '} {loading && <ActivityIndicator size="small" color="white" />}</Text>
       </TouchableOpacity>
+      
       <View style={styles.iconContainer}>
          <TouchableOpacity style={[styles.iconButton,{backgroundColor:theme==='light' ? 'white' : 'lightgray'}]} onPress={signinGoogle}>
             <Image
@@ -297,22 +331,7 @@ const styles = StyleSheet.create({
     fontFamily: 'Poppins-Regular',
     textAlign: 'center',
   },
-  button: {
-   
-    paddingVertical: 12,
-    paddingHorizontal: 32,
-    borderRadius: 20,
-    elevation: 3,
-  },
-  buttonText: {
-    fontSize: 16,
-    lineHeight: 21,
-    fontWeight: 'bold',
-    letterSpacing: 0.5,
-    color: 'white',
-    textAlign: 'center',
-    fontFamily: 'Poppins-Regular',
-  },
+ 
   iconContainer: {
     flexDirection: 'row',
     justifyContent: 'center',
@@ -327,6 +346,22 @@ const styles = StyleSheet.create({
   logIcon: {
     width: 30,
     height: 30,
+  },
+  button: {
+   
+    paddingVertical: 12,
+    paddingHorizontal: 32,
+    borderRadius: 20,
+    elevation: 3,
+  },
+  buttonText: {
+    fontSize: width>=500?18:15,
+    lineHeight: 21,
+    fontWeight: 'bold',
+    letterSpacing: 0.5,
+    color: 'white',
+    textAlign: 'center',
+    fontFamily: 'Poppins-Regular',
   },
 });
 

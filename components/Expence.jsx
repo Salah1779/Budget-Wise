@@ -1,5 +1,5 @@
 import { useContext } from 'react';
-import { View, Text, StyleSheet, Image } from 'react-native';
+import { View, Text, StyleSheet, Image,Dimensions } from 'react-native';
 import { ThemeContext } from '../context/ThemeContext';
 import { Colors } from '../constants/Colors'; // Correct import path
 import Ficon5 from 'react-native-vector-icons/FontAwesome5';
@@ -8,7 +8,19 @@ import Ficon from 'react-native-vector-icons/FontAwesome';
 import Maticon from 'react-native-vector-icons/MaterialIcons';
 import Entyicon from 'react-native-vector-icons/Entypo';
 
-const Expence = ({ category = 'other', amount = 0, currency = 'USD', date = '', method = '' }) => {
+const {width,height}=Dimensions.get('window');
+
+const Expence = ({ category = 'other',
+                   amount = 0 ,
+                   date = '', 
+                   article = '' ,
+                   contentContainerStyle={},
+                   titleStyle = {},
+                   dateStyle = {},
+                   amountStyle = {},
+                   articleStyle = {},
+                  
+                     }) => {
     categoryKey = category.split(' ')[0];
 
     const getCategoryIcon = (category) => {
@@ -38,23 +50,24 @@ const Expence = ({ category = 'other', amount = 0, currency = 'USD', date = '', 
         }
     };
 
-    const { theme } = useContext(ThemeContext);
+    const { theme,currency } = useContext(ThemeContext);
+
 
     return (
-        <View style={[styles.container, {
-            backgroundColor: theme === 'light' ? '#fff' : '#708090',
-            shadowColor: theme === 'light' ? '#000' : '#fff',
-        }]}>
+        <View style={[styles.container,{
+          backgroundColor: theme === 'light' ? '#fff' : '#708090',
+          shadowColor: theme === 'light' ? '#000' : null,
+           },contentContainerStyle]}>
             <View style={[styles.iconContainer, { backgroundColor: Colors['categoryColor'][categoryKey] || '#fff' }]}>
                 {getCategoryIcon(categoryKey)}
             </View>
 
             <View style={styles.detailsContainer}>
                 
-                    <Text style={styles.title}>{category}</Text>
-                    <Text style={styles.amount}>-{currency} {amount}</Text>
-                    <Text style={[styles.date, { color: theme === 'light' ? 'grey' : 'lightgrey' }]}>{date}</Text>
-                    <Text style={styles.note}>"Note for this expense" </Text>
+                    <Text style={[styles.title,titleStyle]}>{category}</Text>
+                    <Text style={[styles.amount,amountStyle]}>-{currency} {amount}</Text>
+                    <Text style={[styles.date, { color: theme === 'light' ? 'grey' : 'lightgrey' },dateStyle]}>{date}</Text>
+                    <Text style={[styles.article,articleStyle]}>{article} </Text>
                 
             </View>
 
@@ -70,11 +83,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     padding: 10,
-    borderRadius: 8,
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 1,
+ 
     paddingTop:0,
    
   },

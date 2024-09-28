@@ -5,16 +5,18 @@ import { Colors } from "../constants/Colors";
 import { getData } from "../helpers/AsynchOperation";
 import { ThemeContext } from "../context/ThemeContext";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import * as Font from 'expo-font';
 //import * as SecureStore from 'expo-secure-store';
 
 const SplashScreen = () => {
  // const [isLoading, setIsLoading] = useState(true);
-  const route = useRoute();
+ // const route = useRoute();
   const navigation = useNavigation();
   const { theme } = useContext(ThemeContext);
   const { width } = useWindowDimensions(); // Get the screen width
    
- 
+   // State to manage font loading
+   const [fontsLoaded, setFontsLoaded] = useState(false);
   const clearAsyncStorage = async () => {
     try {
       await AsyncStorage.clear(); // Clears all items in AsyncStorage
@@ -24,29 +26,50 @@ const SplashScreen = () => {
     }
   };
 
-
-
-  useEffect(() => {
-    // Simulate a loading process and navigate to the next screen after 2 seconds
-    const timer = setTimeout( async () => {
-        const finished = await getData("Finish");
-        const signin = await getData("userToken");
+   // Function to load custom fonts
+   const loadFonts = async () => {
+     await Font.loadAsync({
+       'Poppins-Regular': require('../assets/fonts/Poppins-Regular.ttf'), // Adjust the path to your font file
+       
+     });
+     setFontsLoaded(true);
+   };
+ 
+   useEffect(() => {
      
-         console.log ("finished: ",finished)
-         console.log ("Sign In",signin)
-              
-        finished===false ? navigation.replace('OnboardingScreen') : signin!==null ? navigation.replace('AppStack') :
-        navigation.replace('Log') ;
-          
-      
-    }, 1200);
+     const checkNavigation = async () => {
+       const finished = await getData("Finish");
+       const signin = await getData("userToken");
+       const pin = await getData("pinEnabled");
+       if(pin===true){
+         navigation.replace('Pin');
+  
+       }
+       else if (finished === false) {
+         navigation.replace('OnboardingScreen');
+       } else if (signin !== null) {
+         navigation.replace('AppStack');
+       } else {
+         navigation.replace('Log');
+       }
+     };
+     // Load the fonts when the component mounts
+     loadFonts();
+ 
+     // Simulate a loading process and navigate after fonts are loaded
+     if (fontsLoaded) {
+       const timer = setTimeout(() => {
+         checkNavigation();
+       }, 1200);
+ 
+       return () => clearTimeout(timer);
+     }
+   }, [fontsLoaded]);
 
-
-   //  clearAsyncStorage();
-
-    // Cleanup the timer on component unmount
-    return () => clearTimeout(timer);
-  }, [navigation]);
+//  useEffect(() => {
+//   // clearAsyncStorage();
+//  },[]);
+   
 
   return (
     <View style={[styles.container, { backgroundColor: Colors[theme].background }]}>

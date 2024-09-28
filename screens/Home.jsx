@@ -1,4 +1,4 @@
-import React, { useContext, useEffect, useState } from 'react';
+import React, { useContext, useEffect, useState, useCallback } from 'react';
 import {
   Button,
   StyleSheet,
@@ -8,105 +8,280 @@ import {
   Image,
   TouchableOpacity,
   FlatList,
-  Platform
+  Platform,
+  Switch,
+  TextInput,
+  Dimensions,
+  Alert,
+  Linking,
+  ActivityIndicator,
+  
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation ,useFocusEffect} from '@react-navigation/native';
+import { Picker } from '@react-native-picker/picker';
 import { Colors } from '../constants/Colors';
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import { ThemeContext } from '../context/ThemeContext';
 import CustomizedStatusBar from '../components/CustomizedStatusBar';
-
+import BottomSheetModal from '../components/BottomSheetModal';
+import CustomModal from '../components/CustomModal';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import {getData} from '../helpers/AsynchOperation';
+import {getData, storeData} from '../helpers/AsynchOperation';
 import Icon from 'react-native-vector-icons/FontAwesome'; 
 import ExpencesList from '../components/ExpencesList';
+import Calculator from '../components/Calculator';
+import CalculatorModal from '../components/CalculatorModal';
 
-//import  Calculator from '../components/Calculator';
-//import { PieChart } from "react-native-gifted-charts";
-  
+import { PieChart } from "react-native-gifted-charts";
+import { clamp } from 'react-native-reanimated';
+
+const {width}= Dimensions.get('window');
+
 const Home = () => {
   const navigation = useNavigation();
   const { width } = useWindowDimensions();
-  const { theme } = useContext(ThemeContext);
-  const [notificationCount, setNotificationCount] = useState(1);
+  const { theme,setExpression,expression,result,setResult,currency ,setIsSearching,showCalculator,setShowCalculator} = useContext(ThemeContext);
+  const [notificationCount, setNotificationCount] = useState(0);
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
-  const [budget, setBudget] = useState([]);
-  const [data, setData] = useState([]);
+  const [isModalVisible, setIsModalVisible] = useState(false);
+  const [category, setCategory] = useState('');
+  const [activeNotification1, setActiveNotification1] = useState(false);
+  const [activeNotification2, setActiveNotification2] = useState(false);
   const [image, setImage] = useState('');
-  const expenses = [
-    {
-      id: "1",
-      category: "Vehicle",
-      amount: 10400,
-      currency: "MAD",
-      date: "Aug 28",
-      method: "cash"
-    },
-     {
-      id: "2",
-      category: "Food and Drinks",
-      amount: 1560,
-      currency: "MAD",
-      date: "Aug 28",
-      method: "cash"
-    },
-     {
-      id: "3",
-      category: "Financial Expences",
-      amount: 10000,
-      currency: "MAD",
-      date: "Aug 28",
-      method: "cash"
-    },
-     {
-      id: "4",
-    category: "Entertainment",
-      amount: 300,
-      currency: "MAD",
-      date: "Aug 29",
-      method: "card"
-    },
-  ]
+  const [loading, setLoading] = useState(false);
+  const [categories, setCategories] = useState([]);
+  const [totalBudget, setTotalBudget] = useState(0);
+  const [pieData, setPieData] = useState([]);
+  const [focusedPercentage, setFocusedPercentage] = useState(0);
+  const [labelSection, setLabelSection] = useState('');
+  const [budget, setBudget] = useState([]);
+  const [expences, setExpences] = useState([]);
+  const [loadExpenses, setLoadExpenses] = useState(false);
+  const [allbudgetsAdded, setAllbudgetsAdded] = useState(false);
+
+ //fetching categoies for picker 
+  const fetchcategories = async () => {
     
+    try {
+        const Client = await getData('userToken');
+        console.log(Client.user);
 
+        const res = await fetch('http://192.168.11.102:5000/api/categories', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ email: Client.user.email }),
+        });
+
+        const data = await res.json();
+        if(res.status===404)
+        {
+            setAllbudgetsAdded(true);
+           
+        }
+        else if (!res.ok) {
+            throw new Error('Network response was not ok');
+            
+        }
+
+        
+        setCategories(data.categories || []); // Ensure data is correctly accessed
+
+    } catch (error) {
+        console.error('Error fetching categories:', error);
+        // Handle error (e.g., show an alert or notification)
+    }
+};
+
+/******************************************************************************/
+//Retrieve budgets
+const fetchbudgets = async () => {
   
-  const pieData = [
-    {
-      value: 47,
-      color: '#009FFF',
-      gradientCenterColor: '#006DFF',
-      focused: true,
-    },
-    {value: 40, color: '#93FCF8', gradientCenterColor: '#3BE9DE'},
-    {value: 16, color: '#BDB2FA', gradientCenterColor: '#8F80F3'},
-    {value: 3, color: '#FFA5BA', gradientCenterColor: '#FF7F97'},
-  ];
+  try {
+      const Client = await getData('userToken');
+      const res = await fetch('http://192.168.11.102:5000/api/budget-list', {
+          method: 'POST',
+          headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${Client.token}` 
+          },
+          body: JSON.stringify({ email: Client.user.email }),
+      });
 
-const budgets=[
-  {
-    id: "1",
-    category: "Vehicle",
-    amount: 10400,
-    currency: "MAD",
-   
-  },
-     {
-    id: "2",
-    category: "Food and Drinks",
-    amount: 1560,
-    currency: "MAD",
-    date: "Aug 28",
-    method: "cash"
-  },
-     {
-    id: "3",
-    category: "Financial Expences",
-    amount: 10000,
-    currency: "MAD",
-     },
-]
+      const answer = await res.json();
+      if (!res.ok) {
+          throw new Error(answer.error || 'Network response was not ok');
+      }
+      
+      await storeData('userToken', answer.user);
+      setBudget(answer.data || []); 
+
+  } catch (error) {
+    Alert.alert('Error', 'Something went wrong try again later');
+      
+  }
+  
+};
+
+ 
+const UpdateTotalBudget = useCallback(() => {
+  if (budget.length === 0) {
+    setTotalBudget(0);
+    return;
+  }
+  // Calculate the sum of amounts in the budget
+  const sum = budget.reduce((acc, element) => acc + element.amount, 0);
+  setTotalBudget(sum);
+}, [budget]);
+
+
+useEffect(() => {
+  UpdateTotalBudget();
+}, [UpdateTotalBudget]);
+
+useFocusEffect(
+  useCallback(() => {
+      fetchbudgets();
+      setIsSearching(false);
+      
+  }, []) 
+);
+ 
+  // Function to generate pie data from budget state
+  const generatePieData = useCallback(() => {
+    if (!budget || budget.length === 0) 
+    {
+      const emptyPieData = [
+        {
+          value: 100,
+          color: '#ccc',
+          key: 'empty',
+          focus: false,
+          label: '',
+        },
+
+      ];
+
+      setPieData(emptyPieData);
+      setLabelSection('');
+      
+      return;
+    }
+
+    const totalBudget = budget.reduce((acc, item) => acc + item.amount, 0);
+    const data = budget.map((item, index) => ({
+      value: item.amount,
+      color: Colors['categoryColor'][item.cat?.split(' ')[0]] || '#ccc', // Default color
+      key: `${item.cat}-${index}`,
+      focus: item.amount === Math.max(...budget.map(i => i.amount)),
+      label: item.cat,
+    }));
+
+    // Set initial focused percentage based on the max amount
+    const initialFocusItem = data.find(d => d.focus);
+    setFocusedPercentage(((initialFocusItem.value / totalBudget) * 100).toFixed(2));
+    setLabelSection(initialFocusItem.label);
+
+    setPieData(data);
+  }, [budget]);
+
+  // Use effect to generate data when budget state changes
+  useEffect(() => {
+    generatePieData();
+  }, [generatePieData]);
+
+ 
+
+//add the budget to the database
+const addBudgetToDB = async() => {
+  //setErrors({cat:category===''?"*Required":'',result:result===0?"*Required":''});
+  if(category!=='' && result!==0){
+    const userToken = await getData('userToken');
+    
+    setLoading(true);
+    const res=await fetch('http://192.168.11.102:5000/api/add-budget', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${userToken.token}`,
+        
+      },
+      body: JSON.stringify({
+        category: category,
+        amount: result
+      }),
+    });
+    const data = await res.json();
+    if (res.status === 200) {
+      setCategory('');
+      setResult(0);
+      closemodal();
+      Alert.alert('Success', 'Budget added successfully');
+      await storeData('userToken', data.data);
+      setLoading(false);
+    }
+    else{
+      Alert.alert('Error', data.error);
+      setLoading(false);
+    }
+    
+  
+ 
+}
+}
+
+
+/******************************************************************************/
+//Expences section 
+
+
+
+const fetchExpences = async (limit=null) => {
+  setLoadExpenses(true);
+  try {
+      
+      const Client = await getData('userToken');
+      const res = await fetch('http://192.168.11.102:5000/api/expence-list', {
+          method: 'POST',
+          headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${Client.token}` 
+          },
+          body: JSON.stringify({limited:limit}),
+      });
+
+      const answer = await res.json();
+      if (!res.ok) {
+          throw new Error(answer.error || 'Network response was not ok');
+      }
+      
+      await storeData('userToken', answer.user);
+      setExpences(answer.data || []); 
+
+  } catch (error) {
+    Alert.alert('Error', 'Something went wrong try again later');
+      
+  }
+  finally{
+     setLoadExpenses(false);
+  }
+};
+
+useEffect(() => {
+  fetchExpences(4);
+}, []);
+
+
+
+  const openModal = () => {
+    setIsModalVisible(true);
+  }
+  const closemodal = () => {
+    setIsModalVisible(false);
+  }
   
  // Fetch user data on component mount
  useEffect(() => {
@@ -124,8 +299,17 @@ const budgets=[
   };
 
   fetchUserData();
+  UpdateTotalBudget();
 }, []);
 
+
+const pickerItemStyle = {
+  color: theme==='light' ? '#888' : 'lightgrey',
+  backgroundColor: Colors[theme].background,
+  fontSize: width > 440 ? 19 : 16,
+  fontStyle:'semibold',
+  fontFamily:'Poppins-Regular',
+}
   return (
     <>
       <CustomizedStatusBar 
@@ -142,9 +326,11 @@ const budgets=[
           activeOpacity={1} // Remove opacity change on press
           style={styles.profileContainer}
         >
+          
           <Image
             source={image !== '' ? { uri: image } : require('../assets/images/profile-pic.jpg')}
             style={styles.pic}
+            
           />
           <View style={styles.nameContainer}>
             <Text style={[styles.userName, { color: theme==='light' ? 'lightblue' : Colors[theme].primaryButton, fontSize: width > 400 ? 14 : 12 }]}>
@@ -157,73 +343,91 @@ const budgets=[
         </TouchableOpacity>
 
           
-          <View style={styles.notification}>
+          <TouchableOpacity style={styles.notification}
+            onPress={() => navigation.navigate('Notification')}
+            activeOpacity={1} 
+          >
             <Icon name="bell" size={width > 400 ? 25 : 23} color={Colors['light'].secondaryButton}  />
             {notificationCount > 0 && (
               <View style={styles.containerCount}>
                 <Text style={styles.textCount}>{notificationCount.toString()}</Text>
               </View>
             )}
-          </View>
+          </TouchableOpacity>
         </View>
 
         <View style={styles.BudgetContainer}>
           <View>
             <Text style={[styles.heading, { color: Colors[theme].header }]}>YOUR BUDGET</Text>
-            <Text style={[styles.moneyBudget, { color: Colors[theme].header }]}>1233.32</Text>
+            <Text style={[styles.moneyBudget, { color: Colors[theme].header }]}>{currency} {totalBudget} </Text>
           </View>
           <View style={[styles.pieChartContainer]}>
-          {/* <PieChart
+          <PieChart
           data={pieData}
           donut
           showGradient
+          semiCircle
           sectionAutoFocus
-          radius={90}
-          innerRadius={60}
+          focusOnPress
+          onPress = { (item, index) =>{
+             setFocusedPercentage(((item.value / totalBudget) * 100).toFixed(2))
+             setLabelSection(item.label);
+            } }
+          radius={width > 400 ? 86 : 75}
+          innerRadius={width > 400 ? 60 : 50}
           innerCircleColor={'#232B5D'}
-          centerLabelComponent={() => {
-            return (
-              <View style={{justifyContent: 'center', alignItems: 'center'}}>
-                <Text
-                  style={{fontSize: 22, color: 'white', fontWeight: 'bold'}}>
-                  47%
-                </Text>
-                <Text style={{fontSize: 14, color: 'white'}}>Excellent</Text>
-              </View>
-            );
-          }}
-        /> */}
+          centerLabelComponent={() => (
+            
+            <View style={{ alignItems: 'center',flexDirection:'column-reverse' }}>
+              { labelSection !== '' &&<Text style={[{ fontSize: width > 400 ? 23 : 18},styles.centerComponnentText ]}>
+                {focusedPercentage}%
+              </Text>}
+              <Text style={[{ fontSize: width > 400 ? 12 : 10},styles.centerComponnentText ]}>
+                {labelSection || 'No data XD'}
+              </Text>
+            </View>
+          )}
+        />
           </View>
         </View>
 
         <View style={[styles.list]}>
-        <FlatList
-            data={budgets}
+        <FlatList //style={[]}
+            data={budget}
             showsHorizontalScrollIndicator={false}
             renderItem={({ item }) => {
               const [integerPart, decimalPart] = item.amount.toString().split('.');
               return (
-                <View style={[styles.card, { backgroundColor: Colors['categoryColor'][item.category.split(' ')[0]] }]}>
-                  <Text style={[styles.text, { color: Colors[theme].text }]}>{item.category}</Text>
+                <View style={[styles.card, { backgroundColor: Colors['categoryColor'][item.cat.split(' ')[0]] }]}>
+                  <Text style={[styles.text, { color: Colors[theme].text }]}>{item.cat}</Text>
                   <View style={[styles.amountContainer]}>
                     <Text style={[styles.text,styles.amount, { color: Colors[theme].text }]}>
                       {integerPart}
                       <Text style={[styles.text,styles.decimal]}>
                         .{decimalPart ? decimalPart.slice(0, 2) : '00'} {/* Defaulting to '00' if no decimals */}
                       </Text>
-                      <Text style={[styles.currency, { color: Colors[theme].text }]}> {item.currency}</Text> {/* Assuming item.currency holds the currency symbol */}
+                      <Text style={[styles.currency, { color: Colors[theme].text }]}> {currency}</Text> 
                     </Text>
                   </View>
                 </View>
               );
             }}
-            keyExtractor={(item) => item.id}
+            keyExtractor={(item) => item.id_budget}
             ItemSeparatorComponent={() => <View style={styles.separator} />}
             ListHeaderComponent={() =>
-              budgets.length === 0 ? null : (
+              budget.length === 0 ? null : (
                 <TouchableOpacity
                   style={[styles.listHeader, { borderColor: theme === 'light' ? 'black' : 'lightgrey' }]}
-                  
+                  onPress={()=>{ 
+                     fetchcategories();
+                     if (allbudgetsAdded) {
+                      Alert.alert('Oups!', 'You added all the budget categories for this month!');
+                      return; 
+                    }
+                    setIsModalVisible(true);
+                    }
+
+                  }
                 >
                   <Icon
                     name="plus-circle"
@@ -236,7 +440,8 @@ const budgets=[
             horizontal
             ListEmptyComponent={() => (
               <TouchableOpacity
-                style={[styles.listHeader, styles.emptyList, { borderColor: theme === 'light' ? 'white' : 'lightgrey', width: 100 }]}
+              style={[styles.listHeader, styles.emptyList, { borderColor: theme === 'light' ? 'white' : 'lightgrey', width: 100 }]}
+               onPress={() => setIsModalVisible(true)}
               >
                 <Icon
                   name="plus-circle"
@@ -252,13 +457,100 @@ const budgets=[
         <View style={[styles.ExpenceBlock]}> 
            <View style={[styles.titleContainer]}>
              <Text style={[styles.title,{color:Colors[theme].header}]}>Recent Expenses</Text>
-             <Text style={[styles.link,{color:theme==='light'?'blue':'lightblue'}]}>See all</Text>
+             <Text style={[styles.link,{color:theme==='light'?'blue':'lightblue'}]}  onPress={()=> navigation.navigate('Expences')} >View all</Text>
            </View>
            <View style={[styles.ExpenceContainer]}>
-             <ExpencesList expenceData={expenses}/>
+           {loadExpenses ? 
+           <ActivityIndicator  style={styles.centerPosition} animating={true} size="large" color={Colors['light'].secondaryButton} />
+            : <ExpencesList 
+              expenceData={expences} 
+              contentContainerStyle={styles.expenceCardContainer}
+              />}
            </View>
         </View>
         
+        <BottomSheetModal isVisible={isModalVisible} onClose={closemodal}>
+
+          <View style={[{flexDirection:'row-reverse',flex:1,alignItems:'center', justifyContent:'space-between',marginBottom:20}]}>
+            <View style={[{width:width*0.4}]}>
+               <Text style={[styles.label,{color:theme==='light'?'#888':'lightgrey',marginBottom:0}]}>Category</Text>
+               <Picker
+                  selectedValue={category}
+                  onValueChange={(value) => setCategory(value)}
+                  style={[styles.picker, { color:theme=='light'?'#004':'lightgrey',  }]}
+                  itemStyle={pickerItemStyle}
+                  mode="dropdown"
+                  dropdownIconColor={theme === 'light' ? 'lightblue' : 'lightgrey'}
+                  dropdownIconRippleColor={theme === 'light' ? 'lightblue' : 'lightgrey'}
+                  ItemSeparatorComponent={() => <View style={{ height: 1, width: '80%', backgroundColor: 'gray' }} />}
+                  selectionColor={theme === 'light' ? 'lightblue' : 'lightgrey'}
+               >
+                  <Picker.Item label="Select a category" value="" />
+                  {categories.map((category, index) => (
+                      <Picker.Item key={index} label={category.cat} value={category.cat} />
+                  ))}
+              </Picker>
+            </View>
+            
+            <View  >
+              <Text style={[styles.label,{color:theme==='light'?'#888':'lightgrey'}]}>Amount</Text>
+              <TouchableOpacity onPress={() => {setShowCalculator(true);setExpression( result.toString()==='0'?'':result)}}>
+                <TextInput
+                  style={[styles.input,{color:theme==='light'?'#004':'lightgrey'}]}
+                  placeholder="Enter budget amount"
+                  keyboardType="numeric"
+                  placeholderTextColor={theme === 'light' ? 'grey' : 'darkgrey'}
+                  value={result}
+                  editable={false}  
+                 
+                />
+              </TouchableOpacity>
+            </View>
+          
+          </View>
+
+
+          <View style={{widht:'80%',height:1,backgroundColor:'rgba(136, 136, 136, 0.13)',}}/>
+
+          <Text style={[styles.label,{color:Colors[theme].header,letterSpacing:0,marginBottom:30,marginVertical:30}]}>Notifications</Text>
+
+
+          <View style={styles.switchContainer}>
+          <Text style={[styles.label,{color:theme==='light'?'#888':'grey',letterSpacing:0,marginBottom:0}]}>Send notification when amount exceeds</Text>
+
+            <Switch
+              value={activeNotification1}
+              onValueChange={setActiveNotification1}
+              trackColor={{ false: 'rgba(136, 136, 136, 0.65)', true: 'lightblue' }}
+              thumbColor='lightblue'
+              ios_backgroundColor="#3e3e3e"
+              style={{ transform: [{ scaleX: 1.2 }, { scaleY: 1.2 }]}}
+            />
+          </View>
+          <View style={styles.switchContainer}>
+            <Text style={[styles.label,{color:theme==='light'?'#888':'grey',letterSpacing:0,marginBottom:0}]}>Send notification when amount exceeds</Text>
+
+            <Switch
+              value={activeNotification2}
+              onValueChange={setActiveNotification2}
+             color={theme === 'light' ? 'lightblue' : 'lightblue'}
+             trackColor={{ false: 'rgba(136, 136, 136, 0.65)', true: 'lightblue' }}
+             thumbColor='lightblue'
+             ios_backgroundColor="#3e3e3e"
+             style={{ transform: [{ scaleX: 1.2 }, { scaleY: 1.2 }]}}
+              
+            />
+          </View>
+          <TouchableOpacity style={[styles.button, {backgroundColor:loading ? 'gray' : Colors[theme].primaryButton}]}
+           onPress={() => {addBudgetToDB();
+                          fetchbudgets();
+                         // setTotalBudget(totalBudget+budget[budget.length-1].amount);
+                          }} >
+               <Text style={styles.buttonText}>Done{' '} {loading && <ActivityIndicator size="small" color="white" />}</Text>
+          </TouchableOpacity>
+        </BottomSheetModal>
+        
+        <CalculatorModal Style={[{backgroundColor:theme==='light'?'white':'#E5E4E2',}]} />
 
        
       </View>
@@ -268,6 +560,7 @@ const budgets=[
 
 export default Home;
 
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -275,6 +568,14 @@ const styles = StyleSheet.create({
    // alignItems: 'center',
     flexDirection: 'column',
     gap: 20,
+  },
+  centerPosition:
+  {
+    position: 'absolute',
+    top:0,
+    left:0,
+    right:0,
+    bottom:0,
   },
   header: {
     flexDirection: 'row',
@@ -295,8 +596,9 @@ const styles = StyleSheet.create({
     
   },
   userName: {
-    fontFamily:'Poppins-Regular',
+    
     fontStyle: 'italic',
+    fontFamily: 'Poppins-Regular',
   },
   notification: {
     flexDirection: 'row',
@@ -316,6 +618,7 @@ const styles = StyleSheet.create({
   textCount: {
     color: 'white',
     fontSize: 10,
+    fontFamily: 'Poppins-Regular',
   },
   notificationIcon: {
     marginRight: 20,
@@ -325,6 +628,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 20,
+    
   },
   pieChartContainer: {
     justifyContent: 'center',
@@ -332,14 +636,15 @@ const styles = StyleSheet.create({
     paddingVertical: 20,
   },
 
-  centerLabel: {
-    fontSize: 16,
+  centerComponnentText: {
+    position:'relative',
+    top:4,
+    fontFamily:'Poppins-Regular',
+    color :'white',
     fontWeight: 'bold',
   },
   list: {
-    marginTop: 20,
-    
-    height: 190,
+   
   },
   card: {
     padding: 10,
@@ -389,11 +694,15 @@ const styles = StyleSheet.create({
     opacity: 0.6,
   },
   heading: {
-    fontSize: 14,
+    fontSize: 20,
+    fontWeight: '700',
+    fontFamily: 'Poppins-Regular',
+
   },
   moneyBudget: {
     fontSize: 24,
-    fontWeight: 'bold',
+    
+    fontFamily: 'Poppins-Regular',
     marginTop: 4,
   },
   emptyList: {
@@ -418,9 +727,87 @@ const styles = StyleSheet.create({
   ExpenceContainer: {
    margin:20,
    marginTop:10,
-   
+   //height:clamp(height*0.48, 200, 500),
+ 
+   //backgroundColor: 'white',
+   flex: 1,
    
   },
+ExpenceBlock: {
+  
+ flex: 1,
+  
+},
+label: {
+  fontStyle: 'italic',
+  fontFamily:'Poppins-Regular',
+  fontWeight: 'bold',
+  letterSpacing: 0.3,
+  marginBottom: 10,
+},
+picker: {
+  height: 40,
+  borderColor: 'gray',
+  borderWidth: 1,
+  borderRadius: 5,
+  paddingHorizontal: 10,
+  marginBottom: 10,
+  
+},
+input: {
+  height: 40,
+  borderColor: 'gray',
+  borderWidth: 1,
+  borderRadius: 5,
+  paddingHorizontal: 10,
+  marginBottom: 20,
+  
+},
+switchContainer: {
+  flexDirection: 'row',
+  justifyContent: 'center',
+  gap:20,
+  marginBottom: 20,
+},
+buttonContainer: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  justifyContent: 'space-between',
+  marginTop: 35,
+
+
+},
+button: {
+   
+  paddingVertical: 12,
+  paddingHorizontal: 32,
+  borderRadius: 20,
+  elevation: 3,
+},
+buttonText: {
+  fontSize: width>=500?18:15,
+  lineHeight: 21,
+  fontWeight: 'bold',
+  letterSpacing: 0.5,
+  color: 'white',
+  textAlign: 'center',
+  fontFamily: 'Poppins-Regular',
+},
+
+expenceCardContainer:
+{
+  borderRadius: 8,
+  shadowOffset: { width: 0, height: 1 },
+  shadowOpacity: 0.1,
+  shadowRadius: 8,
+  elevation: 1,
+},
+textModal: {
+  fontSize: width>400 ? 19 : 17,
+  textAlign: 'center',
+  fontFamily:'Poppins-Regular',
+  
+},
 
  
  
