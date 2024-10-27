@@ -11,6 +11,7 @@ import {
 import { Colors } from '../constants/Colors';
 import { ThemeContext } from '../context/ThemeContext';
 import { clamp } from 'react-native-reanimated';
+import {ip} from '../constants/IPAdress.js';
 
 const { width, height } = Dimensions.get('window');
 
@@ -121,7 +122,6 @@ const styles = StyleSheet.create({
     left:0,
     right:0,
     bottom:0,
- 
 
   },
   emptyImage: {

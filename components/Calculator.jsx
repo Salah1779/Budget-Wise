@@ -2,20 +2,22 @@ import { View, Text, TouchableOpacity, StyleSheet, TextInput, ScrollView,Dimensi
 import React, { useState, useEffect,useContext, useRef, useCallback } from 'react';
 import { Colors } from '../constants/Colors'; // Ensure this import is correct
 import { ThemeContext } from '../context/ThemeContext';
+import { BudgetContext, ExpenseContext } from '../context/CalculContext';
 import FontAwesome6 from 'react-native-vector-icons/FontAwesome6';
 import { getData, storeData } from '../helpers/AsynchOperation';
 
 const {width ,height}= Dimensions.get('window');
-const Calculator = () => {
-  const { theme ,expression,setExpression} = useContext(ThemeContext);
-
+const Calculator = ({ type = 'budget' }) => {
+  const { theme } = useContext(ThemeContext);
+  const {expression,setExpression} = useContext(type === 'budget' ? BudgetContext : ExpenseContext);
   const [error, setError] = useState('');
-  const deleteInterval = useRef(null); // Ref to store the interval ID
-  const expressionRef = useRef(expression); // Ref to keep the current expression
+
+
+ 
+
    
  
-  // Sync ref with the latest expression state
-  expressionRef.current = expression;
+
 
  
 
@@ -28,82 +30,168 @@ const Calculator = () => {
   ];
 
   // Function to handle button presses
+  // const handleButtonPress = useCallback((value) => {
+  //   const lastChar = expression.slice(-1);
+  //   const secondLastChar = expression[expression.length-2];
+    
+  //   const operators = ['+', '-', '*', '/'];
+    
+  //   const validExp =/^-?([0-9]+(\.[0-9]+)?)([\+\-\/\*]([0-9]+(\.[0-9]+)?))*$/;
+  //   ;
+
+  //   if (value === '0') {
+  //     console.log(secondLastChar ,lastChar);
+
+  //     //if (expression === '') setExpression(expression + '0'); 
+  //     if(lastChar === '0' && operators.includes(secondLastChar) || ( expression==='0' )) 
+  //       setExpression(expression );
+  //     else 
+  //          setExpression(expression + '0'); 
+
+  //   } else if (operators.includes(value)) {
+  //     if(value==='-' && (expression === '' || !operators.includes(lastChar)))
+  //        setExpression(expression + value);
+  //     else if (lastChar !== '' && !operators.includes(lastChar) ) setExpression(expression + value);
+
+  //   } else if (value === '.') {
+  //     // Check if the last number already contains a decimal
+  //     const lastNumber = expression.split(/[\+\-\/\*]/).pop(); // Split by operators and get the last number
+  //     if (!lastNumber.includes('.') && lastNumber !== '') {
+  //       setExpression(expression + value);
+  //     }
+  //   } else if (value > 0 && value < 10) {
+  //     if(lastChar === '0' && operators.includes(secondLastChar) || ( expression==='0' )) 
+  //         setExpression(expression );
+  //     else
+  //     setExpression(expression + value);
+
+  //   } else if (value === '=') {
+  //     if (validExp.test(expression) )
+  //     {
+  //       try {
+  //         const result = eval(expression);
+  //         setExpression(result.toString());
+  //         setError('');
+  //       } catch (error) {
+  //         setError('Error');
+  //       }
+  //     } else if(expression!=='') {
+  //       setError('Invalid Expression');
+  //     }
+  //   }
+  // }, [expression]);
+
+
+  // const updateExpression = useCallback((value) => {
+  //   expressionRef.current += value;
+  //   setExpression(expressionRef.current); // Update display after modifying ref
+  // }, []);
+
+  // const handleButtonPress = useCallback((value) => {
+  //   const lastChar = expressionRef.current.slice(-1);
+  //   const secondLastChar = expressionRef.current[expressionRef.current.length - 2];
+
+  //   const operators = ['+', '-', '*', '/'];
+  //   const validExp = /^-?([0-9]+(\.[0-9]+)?)([\+\-\/\*]([0-9]+(\.[0-9]+)?))*$/;
+
+  //   if (value === '0') {
+  //     if (lastChar === '0' && operators.includes(secondLastChar) || expressionRef.current === '0') {
+  //       updateExpression('');
+  //     } else {
+  //       updateExpression('0');
+  //     }
+  //   } else if (operators.includes(value)) {
+  //     if (value === '-' && (expressionRef.current === '' || !operators.includes(lastChar))) {
+  //       updateExpression(value);
+  //     } else if (lastChar !== '' && !operators.includes(lastChar)) {
+  //       updateExpression(value);
+  //     }
+  //   } else if (value === '.') {
+  //     const lastNumber = expressionRef.current.split(/[\+\-\/\*]/).pop();
+  //     if (!lastNumber.includes('.') && lastNumber !== '') {
+  //       updateExpression(value);
+  //     }
+  //   } else if (value > 0 && value < 10) {
+  //     if (lastChar === '0' && operators.includes(secondLastChar) || expressionRef.current === '0') {
+  //       updateExpression('');
+  //     } else {
+  //       updateExpression(value.toString());
+  //     }
+  //   } else if (value === '=') {
+  //     if (validExp.test(expressionRef.current)) {
+  //       try {
+  //         const result = eval(expressionRef.current);
+  //         setExpression(result.toString());
+  //         expressionRef.current = result.toString();
+  //       } catch (error) {
+  //         setError('Error');
+  //       }
+  //     } else if (expressionRef.current !== '') {
+  //       setError('Invalid Expression');
+  //     }
+  //   }
+  // }, [updateExpression]);
+
+
+  const updateExpression = useCallback((value) => {
+    setExpression((prev) => prev + value); // Update the expression directly
+  }, []);
+
   const handleButtonPress = useCallback((value) => {
     const lastChar = expression.slice(-1);
-    const secondLastChar = expression[expression.length-2];
-    
+    const secondLastChar = expression[expression.length - 2];
+
     const operators = ['+', '-', '*', '/'];
-    
-    const validExp =/^-?([0-9]+(\.[0-9]+)?)([\+\-\/\*]([0-9]+(\.[0-9]+)?))*$/;
-    ;
+    const validExp = /^-?([0-9]+(\.[0-9]+)?)([\+\-\/\*]([0-9]+(\.[0-9]+)?))*$/;
 
     if (value === '0') {
-      console.log(secondLastChar ,lastChar);
-
-      //if (expression === '') setExpression(expression + '0'); 
-      if(lastChar === '0' && operators.includes(secondLastChar) || ( expression==='0' )) 
-        setExpression(expression );
-      else 
-           setExpression(expression + '0'); 
-      
-
-        
-
+      if ((lastChar === '0' && operators.includes(secondLastChar)) || expression === '0') {
+        setExpression((prev) => prev.slice(0, -1)); // Avoid multiple leading zeros
+      } else {
+        updateExpression('0');
+      }
     } else if (operators.includes(value)) {
-      if(value==='-' && (expression === '' || !operators.includes(lastChar)))
-         setExpression(expression + value);
-      else if (lastChar !== '' && !operators.includes(lastChar) ) setExpression(expression + value);
-
+      if (value === '-' && (expression === '' || !operators.includes(lastChar))) {
+        updateExpression(value);
+      } else if (lastChar !== '' && !operators.includes(lastChar)) {
+        updateExpression(value);
+      }
     } else if (value === '.') {
-      // Check if the last number already contains a decimal
-      const lastNumber = expression.split(/[\+\-\/\*]/).pop(); // Split by operators and get the last number
-      if (!lastNumber.includes('.')) {
-        setExpression(expression + value);
+      const lastNumber = expression.split(/[\+\-\/\*]/).pop();
+      if (!lastNumber.includes('.') && lastNumber !== '') {
+        updateExpression(value);
       }
     } else if (value > 0 && value < 10) {
-      if(lastChar === '0' && operators.includes(secondLastChar) || ( expression==='0' )) 
-          setExpression(expression );
-      else
-      setExpression(expression + value);
-
+      if (lastChar === '0' && operators.includes(secondLastChar) || expression === '0') {
+        setExpression((prev) => prev.slice(0, -1) + value); // Replace leading zero
+      } else {
+        updateExpression(value.toString());
+      }
     } else if (value === '=') {
-      if (validExp.test(expression) )
-      {
+      if (validExp.test(expression)) {
         try {
-          const result = eval(expression);
-          setExpression(result.toString());
+          const result = eval(expression); // Calculate the result
+          setExpression(result.toString()); // Update with the result
           setError('');
         } catch (error) {
           setError('Error');
         }
-      } else if(expression!=='') {
+      } else if (expression !== '') {
         setError('Invalid Expression');
       }
     }
-  }, [expression]);
+  }, [expression, updateExpression]);
 
-  // Function to handle delete button press
+ // Function to handle delete button press
   const handleDelete = useCallback(() => {
-    const currentExpression = expressionRef.current;
-    if (currentExpression) {
-      setExpression(currentExpression.slice(0, -1));
-      setError('');
+    if (expression !== '') {
+      setExpression((prevExpression) => prevExpression.slice(0, -1));
+      // setError('');
     }
-  }, []);
+  }, [expression]);
+ 
 
-  // Function to start deletion on long press
-  const startDeletion = () => {
-    stopDeletion(); // Clear any existing intervals to avoid stacking
-    deleteInterval.current = setInterval(handleDelete, 460); // Adjust speed as needed
-  };
-
-  // Function to stop deletion
-  const stopDeletion = () => {
-    if (deleteInterval.current) {
-      clearInterval(deleteInterval.current);
-      deleteInterval.current = null;
-    }
-  };
+ 
 
   // Function to render buttons
   const renderButtons = () => {
@@ -130,6 +218,7 @@ const Calculator = () => {
         <ScrollView horizontal scrollsT showsHorizontalScrollIndicator={false}>
           <TextInput
             style={[styles.displayText, { color: theme==='light' ? 'black' : 'black' }]}
+            onChangeText={handleButtonPress}
             value={expression || '0'}
             editable={false}
             scrollEnabled
@@ -137,8 +226,6 @@ const Calculator = () => {
         </ScrollView>
         <TouchableOpacity
           onPress={handleDelete}
-          onPressIn={startDeletion}
-          onPressOut={stopDeletion}
           style={styles.deleteButton}
         >
           <FontAwesome6

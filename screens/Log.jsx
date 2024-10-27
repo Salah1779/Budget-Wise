@@ -8,30 +8,29 @@ import SignInButton from '../components/SignInButton';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { storeData ,getData} from '../helpers/AsynchOperation';
 import { ThemeContext } from '../context/ThemeContext';
-
+import { ip } from '../constants/IPAdress';
 export default function Log() {
   const { width } = useWindowDimensions();
-  const route = useRoute();
   const { theme, setTheme} = useContext(ThemeContext);
   const navigation = useNavigation();
   const [error, setError] = useState();
   const [loading, setLoading] = useState(false);
-  const [finished, setFinished] = useState(false);
+  const [firstCurrency, setFirstCurrency] = useState(false);
   
   useEffect(() => {
-    const getItemFinish = async () => {
+    const getItemSetcurrency = async () => {
       try {
-        const launch = await getData("Finish");
+        const launch = await getData("currency");
         const valueToStore = launch === null ? false : true;
-        storeData("Finish", valueToStore);
-        setFinished(valueToStore);
-        console.log("Finish", valueToStore);
+        if(!valueToStore) storeData("currency", valueToStore);
+        setFirstCurrency(valueToStore);
+        console.log("setcurrency", valueToStore);
       } catch (e) {
         console.error('Error retrieving Finish:', e);
       }
     };
 
-    getItemFinish();
+    getItemSetcurrency();
   }, []);
 
  
@@ -78,7 +77,7 @@ export default function Log() {
       const profilePhotoUrl = await fetchProfilePhoto(accessToken);
       
       // Send user data to server
-      const response = await fetch('http://192.168.11.102:5000/api/google-signup', {
+      const response = await fetch(`http://${ip}:5000/api/google-signup`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -90,7 +89,8 @@ export default function Log() {
           image: profilePhotoUrl || 'https://cdn-icons-png.flaticon.com/512/149/149071.png',
         }),
       });
-      console.log('ELAAAACH HAD NA7SSS KAML')
+     
+      
       if (response.ok) {
         const data = await response.json();
         console.log('Response:', data);
@@ -99,7 +99,7 @@ export default function Log() {
           await storeData('userToken', data);
           await storeData('googleLogin', 'true');
           
-         finished===false? navigation.replace('AppStack'): navigation.replace('ChooseCurrency');
+         firstCurrency!==false? navigation.replace('AppStack'): navigation.replace('ChooseCurrency');
         } else {
           console.log('No token received.');
           

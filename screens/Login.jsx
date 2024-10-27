@@ -25,6 +25,7 @@ import Ionicon from 'react-native-vector-icons/Ionicons';
 import SimpleLineIcons from 'react-native-vector-icons/SimpleLineIcons';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons'; // Import the icons from MaterialCommunityIcons
 import { storeData,getData } from '../helpers/AsynchOperation';
+import {ip} from '../constants/IPAdress.js';
 
 const {width ,height}= Dimensions.get('window');
 const Login = () => {
@@ -41,6 +42,7 @@ const {width} = useWindowDimensions();
 
 
   useEffect(() => {
+    
     const getItemFinish = async () => {
       try {
         const launch = await getData("Finish");
@@ -52,7 +54,7 @@ const {width} = useWindowDimensions();
         console.error('Error retrieving Finish:', e);
       }
     };
-
+    console.log("IP: ", ip);
     getItemFinish();
   }, []);
 
@@ -85,7 +87,7 @@ const {width} = useWindowDimensions();
     setLoading(true);
     console.log(email, password);
     try {
-      const response = await fetch('http://192.168.11.102:5000/api/login', {
+      const response = await fetch(`http://${ip}:5000/api/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -160,7 +162,7 @@ const signinGoogle = async () => {
     const profilePhotoUrl = await fetchProfilePhoto(accessToken);
     
     // Send user data to server
-    const response = await fetch('http://192.168.11.102:5000/api/google-signup', {
+    const response = await fetch(`http://${ip}:5000/api/google-signup`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

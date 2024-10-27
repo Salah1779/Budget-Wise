@@ -12,9 +12,11 @@ const ExpencesList = ({expenceData=[],
                       dateStyle = {},
                       amountStyle = {},
                       articleStyle = {},
-                      refreshFetch ,
+                      refreshFetch=()=>{} ,
+                      deleteExpense=()=>{},
+                      location="home"
                     }) => {
-    const {theme,searchQuery} = useContext(ThemeContext)
+    const {searchQuery} = useContext(ThemeContext)
     const [loading,setLoading] = useState(false)
     return (
       expenceData.length > 0 ? (
@@ -32,6 +34,11 @@ const ExpencesList = ({expenceData=[],
               dateStyle={dateStyle}
               amountStyle={amountStyle}
               articleStyle={articleStyle}
+              id_expence={item.id_expence}
+              Delete={deleteExpense}
+              reload={refreshFetch}
+              location={location}
+            
             />
           )}
           keyExtractor={(item) => item.id_expence}
@@ -42,7 +49,7 @@ const ExpencesList = ({expenceData=[],
           scrollEnabled={true}
           refreshing={loading}
           onRefresh={() => {
-            //refreshFetch();
+            refreshFetch();
             setLoading(false);
           }}
         />

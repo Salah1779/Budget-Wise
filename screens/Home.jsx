@@ -17,12 +17,11 @@ import {
   ActivityIndicator,
   
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation ,useFocusEffect} from '@react-navigation/native';
 import { Picker } from '@react-native-picker/picker';
 import { Colors } from '../constants/Colors';
-import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import { ThemeContext } from '../context/ThemeContext';
+import {BudgetContext } from '../context/CalculContext';
 import CustomizedStatusBar from '../components/CustomizedStatusBar';
 import BottomSheetModal from '../components/BottomSheetModal';
 import CustomModal from '../components/CustomModal';
@@ -30,18 +29,19 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import {getData, storeData} from '../helpers/AsynchOperation';
 import Icon from 'react-native-vector-icons/FontAwesome'; 
 import ExpencesList from '../components/ExpencesList';
-import Calculator from '../components/Calculator';
 import CalculatorModal from '../components/CalculatorModal';
-
 import { PieChart } from "react-native-gifted-charts";
 import { clamp } from 'react-native-reanimated';
+import {ip} from '../constants/IPAdress.js';
+
 
 const {width}= Dimensions.get('window');
+
+
 
 const Home = () => {
   const navigation = useNavigation();
   const { width } = useWindowDimensions();
-  const { theme,setExpression,expression,result,setResult,currency ,setIsSearching,showCalculator,setShowCalculator} = useContext(ThemeContext);
   const [notificationCount, setNotificationCount] = useState(0);
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
@@ -57,9 +57,15 @@ const Home = () => {
   const [focusedPercentage, setFocusedPercentage] = useState(0);
   const [labelSection, setLabelSection] = useState('');
   const [budget, setBudget] = useState([]);
-  const [expences, setExpences] = useState([]);
   const [loadExpenses, setLoadExpenses] = useState(false);
   const [allbudgetsAdded, setAllbudgetsAdded] = useState(false);
+
+
+  const {theme,currency ,setIsSearching,expenceList,setExpenceList} = useContext(ThemeContext);
+  const {setExpression,result,setResult,setShowCalculator} = useContext(BudgetContext);
+
+  
+
 
  //fetching categoies for picker 
   const fetchcategories = async () => {
@@ -68,7 +74,7 @@ const Home = () => {
         const Client = await getData('userToken');
         console.log(Client.user);
 
-        const res = await fetch('http://192.168.11.102:5000/api/categories', {
+        const res = await fetch(`http://${ip}:5000/api/categories`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -102,7 +108,7 @@ const fetchbudgets = async () => {
   
   try {
       const Client = await getData('userToken');
-      const res = await fetch('http://192.168.11.102:5000/api/budget-list', {
+      const res = await fetch(`http://${ip}:5000/api/budget-list`, {
           method: 'POST',
           headers: {
               'Content-Type': 'application/json',
@@ -138,8 +144,21 @@ const UpdateTotalBudget = useCallback(() => {
 }, [budget]);
 
 
+//Add expence Display
+
+// useFocusEffect(
+//   useCallback(() => {
+//   }, [])
+// )
+
+useEffect(() => {
+  fetchcategories();
+  fetchExpences(4);
+},[]);
+
 useEffect(() => {
   UpdateTotalBudget();
+  fetchcategories();
 }, [UpdateTotalBudget]);
 
 useFocusEffect(
@@ -149,6 +168,10 @@ useFocusEffect(
       
   }, []) 
 );
+
+
+
+
  
   // Function to generate pie data from budget state
   const generatePieData = useCallback(() => {
@@ -202,7 +225,7 @@ const addBudgetToDB = async() => {
     const userToken = await getData('userToken');
     
     setLoading(true);
-    const res=await fetch('http://192.168.11.102:5000/api/add-budget', {
+    const res=await fetch(`http://${ip}:5000/api/add-budget`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -244,7 +267,7 @@ const fetchExpences = async (limit=null) => {
   try {
       
       const Client = await getData('userToken');
-      const res = await fetch('http://192.168.11.102:5000/api/expence-list', {
+      const res = await fetch(`http://${ip}:5000/api/expence-list`, {
           method: 'POST',
           headers: {
               'Content-Type': 'application/json',
@@ -259,7 +282,8 @@ const fetchExpences = async (limit=null) => {
       }
       
       await storeData('userToken', answer.user);
-      setExpences(answer.data || []); 
+      setExpenceList(answer.data || []); 
+     
 
   } catch (error) {
     Alert.alert('Error', 'Something went wrong try again later');
@@ -270,9 +294,7 @@ const fetchExpences = async (limit=null) => {
   }
 };
 
-useEffect(() => {
-  fetchExpences(4);
-}, []);
+
 
 
 
@@ -312,6 +334,7 @@ const pickerItemStyle = {
 }
   return (
     <>
+   
       <CustomizedStatusBar 
         backgroundColor={Colors[theme].background}
         barStyle={theme === 'light' ? 'dark-content' : 'light-content'}
@@ -419,7 +442,6 @@ const pickerItemStyle = {
                 <TouchableOpacity
                   style={[styles.listHeader, { borderColor: theme === 'light' ? 'black' : 'lightgrey' }]}
                   onPress={()=>{ 
-                     fetchcategories();
                      if (allbudgetsAdded) {
                       Alert.alert('Oups!', 'You added all the budget categories for this month!');
                       return; 
@@ -457,13 +479,13 @@ const pickerItemStyle = {
         <View style={[styles.ExpenceBlock]}> 
            <View style={[styles.titleContainer]}>
              <Text style={[styles.title,{color:Colors[theme].header}]}>Recent Expenses</Text>
-             <Text style={[styles.link,{color:theme==='light'?'blue':'lightblue'}]}  onPress={()=> navigation.navigate('Expences')} >View all</Text>
+             <Text style={[styles.link,{color:theme==='light'?'blue':'lightblue'}]}  onPress={()=> navigation.navigate('Expenses')} >View all</Text>
            </View>
            <View style={[styles.ExpenceContainer]}>
            {loadExpenses ? 
            <ActivityIndicator  style={styles.centerPosition} animating={true} size="large" color={Colors['light'].secondaryButton} />
             : <ExpencesList 
-              expenceData={expences} 
+              expenceData={expenceList.slice(0,4)}
               contentContainerStyle={styles.expenceCardContainer}
               />}
            </View>
@@ -494,7 +516,7 @@ const pickerItemStyle = {
             
             <View  >
               <Text style={[styles.label,{color:theme==='light'?'#888':'lightgrey'}]}>Amount</Text>
-              <TouchableOpacity onPress={() => {setShowCalculator(true);setExpression( result.toString()==='0'?'':result)}}>
+              <TouchableOpacity onPress={() => {setShowCalculator(true); setExpression( result.toString()==='0'?'':result)}}>
                 <TextInput
                   style={[styles.input,{color:theme==='light'?'#004':'lightgrey'}]}
                   placeholder="Enter budget amount"
@@ -554,6 +576,7 @@ const pickerItemStyle = {
 
        
       </View>
+   
     </>
   );
 };

@@ -36,7 +36,7 @@ const SplashScreen = () => {
    };
  
    useEffect(() => {
-     
+    clearAsyncStorage(); 
      const checkNavigation = async () => {
        const finished = await getData("Finish");
        const signin = await getData("userToken");
@@ -66,8 +66,8 @@ const SplashScreen = () => {
      }
    }, [fontsLoaded]);
 
-//  useEffect(() => {
-//   // clearAsyncStorage();
+ //useEffect(() => {
+  //clearAsyncStorage();
 //  },[]);
    
 

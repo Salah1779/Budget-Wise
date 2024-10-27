@@ -1,52 +1,41 @@
-
-
 import React, { useContext ,useState,useCallback} from 'react';
 import { createDrawerNavigator } from '@react-navigation/drawer';
 import { useNavigation,CommonActions } from '@react-navigation/native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
+import Feather from 'react-native-vector-icons/Feather';
 import { useWindowDimensions,TouchableOpacity,View,TextInput,LayoutAnimation } from 'react-native';
+import CustomDrawer from '../components/CustomDrawer';
+import { ThemeContext  } from '../context/ThemeContext';
+import { BudgetProvider,ExpenseProvider } from '../context/CalculContext';
+import {Colors} from '../constants/Colors';
 import Home from '../screens/Home';
 import Profile from '../screens/Profile';
 import ExpenceScreen from '../screens/ExpenceScreen'
-import CustomDrawer from '../components/CustomDrawer';
-import { ThemeContext } from '../context/ThemeContext';
-import {Colors} from '../constants/Colors';
+import FileImportScreen from '../screens/FileImportScreen';
 import NotificationScreen from '../screens/NotificationScreen';
 import SettingStack from './SettingStack';
 
+const HomeScreen=() => (
+    <BudgetProvider >
+        <Home />
+    </BudgetProvider>
+)
+
+const ExpenseScreen = () => (
+  <ExpenseProvider>
+    <ExpenceScreen />
+  </ExpenseProvider>
+)
 
 const Drawer = createDrawerNavigator();
 const AppStack = () => {
   const { theme,setTheme,
-         expenceList,setExpenceList,
-         filteredList,setFilteredList ,
          searchQuery,setSearchQuery,
          isSearching,setIsSearching} = useContext(ThemeContext);
   const navigation = useNavigation();
   
 
-  const { width } = useWindowDimensions();
- 
-
-
-  const handleSearch = (text) => {
-    setSearchQuery(text);
-    const filtered = expenceList.filter((expence) => {
-      return (expence.article?.toLowerCase() || '').includes(text.toLowerCase());
-    });
-    
-    // Update the filteredList state with the new filtered array
-    setFilteredList(filtered);
-  };
-  
-
-  const toggleSearch = () => {
-    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut); // Smooth transition
-    setIsSearching(!isSearching);
-    if(!isSearching )  setSearchQuery('') ;
-  };
-
-  
+  const { width } = useWindowDimensions();  
 
   try {
     return (
@@ -80,7 +69,7 @@ const AppStack = () => {
     >
       <Drawer.Screen
         name="Home"
-        component={Home}
+        component={HomeScreen}
         options={{
           drawerIcon: ({ color }) => (
             <Ionicons name="home-outline" size={22} color={color} />
@@ -110,7 +99,7 @@ const AppStack = () => {
           headerRight: () => (
             <TouchableOpacity
               onPress={() => {
-                navigation.navigate('NotificationsSetting');
+                navigation.navigate('Settings',{screen:'NotificationsSetting'});
 
               }
                 
@@ -124,40 +113,34 @@ const AppStack = () => {
               />
             </TouchableOpacity>
           ),
+      
           
         
         }}
       />
      
       <Drawer.Screen
-        name="Expences"
-        component={ExpenceScreen}
+        name="Expenses"
+        component={ExpenseScreen}
         options={{
           drawerIcon: ({ color }) => (
             <Ionicons name="cash" size={22} color={color} />
           ),
-          headerTitle: isSearching?'':'Expenses',
-          headerRight: () => (
-            <View style={{ flexDirection: 'row', alignItems: 'center', marginRight: 15 }}>
-             {isSearching && 
-             <TextInput
-                placeholder="Search..."
-                placeholderTextColor= {theme==='light' ? 'rgba(85, 85, 85, 0.5)' : 'rgba(229, 228, 226, 0.5)'}
-                onChangeText={(text) => handleSearch(text)}
-                style={{
-                  paddingHorizontal: 10,
-                  width: width*0.6,
-                  marginRight: 10,
-                  color: theme === 'light' ? '#555555' : "lightgrey", // adjust based on theme if needed
-                }}
-              />}
-              <TouchableOpacity onPress={toggleSearch}>
-                <Ionicons name="search-outline" size={24} color={theme === 'light' ? '#555555' : "lightgrey"} style={{ marginRight: 15 }} />
-              </TouchableOpacity>
-            </View>
-          ),
+         
         }}
       />
+
+   <Drawer.Screen
+        name="Import file"
+        component={FileImportScreen}
+        options={{
+          drawerIcon: ({ color }) => (
+            <Feather name="upload" size={22} color={color} />
+          ),
+         
+        }}
+      />
+
         <Drawer.Screen
         name="Settings"
         component={SettingStack}

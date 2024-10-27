@@ -12,7 +12,7 @@ const MenuScreen = () => {
   const { theme } = useContext(ThemeContext);
   const sections = [
     {
-      icon: 'person-outline',
+      icon: 'person',
       title: 'Profile',
       body: 'View and update your personal information, including name, gender, and password. ',
       screen: 'UserProfile',
@@ -25,13 +25,13 @@ const MenuScreen = () => {
       screen: 'Theme',
     },
     {
-      icon: 'notifications-none',
+      icon: 'notifications',
       title: 'Notifications',
       body: 'Manage notification preferences for important updates, reminders, and budgeting alerts..',
       screen: 'NotificationsSetting',
     },
     {
-      icon: 'lock-outline',
+      icon: 'lock',
       title: 'Security',
       body: "Enhance the security of your account by\nenabling PIN code authentication and Fingerprint .",
       screen: 'Security',
@@ -39,7 +39,7 @@ const MenuScreen = () => {
     {
       icon: 'privacy-tip',
       title: 'Privacy & Data',
-      body: " manage how your personal data is collected,\nused, and shared..",
+      body: " manage how your personal data is collected, used, and shared..",
       screen: 'PersonalDataPrivacy',
     },
   ];
@@ -79,16 +79,17 @@ const MenuScreen = () => {
 export default MenuScreen;
 const styles = StyleSheet.create({
   sectionContainer: {
+    flex: 1,
     paddingVertical: 15,
-    paddingHorizontal:10,
+    paddingHorizontal:15,
     flexDirection: 'row',
     alignItems: 'center',
-    gap:5,
+    gap:15,
   },
-  titleContainer: {
+  textContainer: {
     flexDirection: 'column',
-    
-    
+    //paddingRight:20,
+   
     
   },
   title: {
@@ -100,7 +101,10 @@ const styles = StyleSheet.create({
   body: {
     fontSize: clamp(width*0.023, 13, 20),
     fontFamily: 'Poppins-Regular',
-    textWrap: 'wrap',
+    paddingRight:10,
+    flexShrink: 1,
+    flexWrap: 'wrap',
+    flexGrow: 1,
   },
   
   separator: {

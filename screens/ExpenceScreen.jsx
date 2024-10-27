@@ -17,11 +17,11 @@ import {
   Animated,
   LayoutAnimation
 } from 'react-native';
+
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { Colors } from '../constants/Colors';
 import LinearGradient from 'react-native-linear-gradient';
-import { ThemeContext } from '../context/ThemeContext';
 import CustomizedStatusBar from '../components/CustomizedStatusBar';
 import BottomSheetModal from '../components/BottomSheetModal';
 import CustomModal from '../components/CustomModal';
@@ -37,6 +37,10 @@ import { Picker } from '@react-native-picker/picker';
 import CalculatorModal from '../components/CalculatorModal';
 
 
+import { ThemeContext } from '../context/ThemeContext';
+import { ExpenseContext } from '../context/CalculContext';
+import {ip} from '../constants/IPAdress'
+
 const { width, height } = Dimensions.get('window');
 
 
@@ -44,14 +48,18 @@ const { width, height } = Dimensions.get('window');
 const ExpenceScreen = () => {
   const navigation = useNavigation();
   const { theme, currency,
-        expenceList,setExpenceList,
-        filteredList,setFilteredList,
         isSearching,setIsSearching,
-        result,setResult,
-        showCalculator,setShowCalculator,
         searchQuery,setSearchQuery ,
-        expression,setExpression
+        expenceList,setExpenceList,
         } = useContext(ThemeContext);
+
+  const {
+        filteredList,setFilteredList
+        , result,setResult
+        ,setShowCalculator
+        ,setExpression,
+   } = useContext(ExpenseContext);
+
  // const [total, setTotal] = useState(0);
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [loading, setLoading] = useState(true);
@@ -59,6 +67,7 @@ const ExpenceScreen = () => {
   const [category, setCategory] = useState('');
   const [article, setArticle] = useState('');
   const [loadingAdd, setLoadingAdd] = useState(false);
+  const [initialFilter, setInitialFilter] = useState([]);
   
 
 //categories filter
@@ -91,7 +100,7 @@ const ExpenceScreen = () => {
         const userToken = await getData('userToken');
         setLoadingAdd(true);
   
-        const res = await fetch('http://192.168.11.102:5000/api/add-expense', {
+        const res = await fetch(`http://${ip}:5000/api/add-expense`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -131,12 +140,51 @@ const ExpenceScreen = () => {
       Alert.alert('Validation Error', 'Please fill all the required fields.');
     }
   };
-  
-  
-  const fetchExpences = async (limit = null) => {
+  const deleteExpenseFromDB = async (id) => {
+    console.log("id: ",id);
+    console.log('Delete start...');
     try {
       const Client = await getData('userToken');
-      const res = await fetch('http://192.168.11.102:5000/api/expence-list', {
+      if (!Client || !Client.token) {
+        throw new Error('User token is missing');
+      }
+      console.log('User token:', Client.token);
+  
+      const res = await fetch(`http://${ip}:5000/api/delete-expence`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${Client.token}`,
+        },
+        body: JSON.stringify({ id }),
+      });
+  
+      // Check if the response is OK before trying to parse it
+      if (!res.ok) {
+        const errorResponse = await res.json(); // Get the response as text
+        throw new Error(errorResponse.error || 'Network response was not ok');
+      }
+  
+      const answer = await res.json(); // Parse as JSON only if response is OK
+      console.log(answer);
+      
+      // Update token
+      const Token = { user: Client.user, token: answer.token };
+      console.log(Token.token);
+      await storeData('userToken', Token);
+      fetchExpences();
+      
+    } catch (error) {
+      console.error('Error deleting expense:', error);
+      Alert.alert('Error', error.message);
+    }
+  };
+  
+  const fetchExpences = async (limit = null) => {
+    setLoading(true);
+    try {
+      const Client = await getData('userToken');
+      const res = await fetch(`http://${ip}:5000/api/expence-list`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -153,6 +201,7 @@ const ExpenceScreen = () => {
       await storeData('userToken', answer.user);
       setExpenceList(answer.data || []);
       setFilteredList(answer.data || []);
+      
 
     } catch (error) {
       console.error('Error fetching expences:', error);
@@ -160,6 +209,7 @@ const ExpenceScreen = () => {
       setLoading(false);
     }
   };
+
 
   const calculateTotal = () => {
     let total = 0;
@@ -169,22 +219,91 @@ const ExpenceScreen = () => {
     return total;
   };
 
+
+
   useFocusEffect(
     useCallback(() => {
       setSelectedCategory('All');
       setSearchQuery('');
-      fetchExpences();
+      ///fetchExpences();  
     }, [])
   );
-
+  
   const filterByCategory = (category = 'All') => {
     if (category === 'All') {
       setFilteredList(expenceList);
+      setInitialFilter(expenceList);
+      
     } else {
       const filtered = expenceList.filter(element => element.cat === category);
       setFilteredList(filtered);
+      setInitialFilter(filtered);
+      
     }
   };
+
+// Handle search logic
+const handleSearch = (text) => {
+
+  setSearchQuery(text);
+  if(text === '' ) {
+  
+    setFilteredList(initialFilter);
+    return;
+  }
+
+  const filtered=initialFilter.filter((expence) => 
+    expence.article?.toLowerCase().includes(text.toLowerCase())
+  );
+  setFilteredList(filtered);
+};
+
+// Toggle search bar visibility
+const toggleSearch = () => {
+  LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+  setIsSearching((prev) => !prev);
+  
+  // Clear search query when turning off search
+  if (isSearching) setSearchQuery('');
+};
+
+useEffect(() => {
+  fetchExpences();
+},[expenceList.length]);
+
+// Set navigation options
+useEffect(() => {
+  navigation.setOptions({
+    headerTitle: isSearching ? '' : 'Expenses',
+    headerRight: () => (
+      <View style={{ flexDirection: 'row', alignItems: 'center', marginRight: 15 }}>
+        {isSearching && (
+          <TextInput
+            placeholder="Search..."
+            placeholderTextColor={theme === 'light' ? 'rgba(85, 85, 85, 0.5)' : 'rgba(229, 228, 226, 0.5)'}
+            onChangeText={(text) => handleSearch(text)}
+            value={searchQuery}
+            style={{
+              paddingHorizontal: 10,
+              width: width * 0.6,
+              marginRight: 10,
+              color: theme === 'light' ? '#555555' : 'lightgrey',
+            }}
+          />
+        )}
+        <TouchableOpacity onPress={toggleSearch}>
+          <Ionicons
+            name={isSearching ? "close-outline" : "search-outline"}
+            size={24}
+            color={theme === 'light' ? '#555555' : 'lightgrey'}
+            style={{ marginRight: 15 }}
+          />
+        </TouchableOpacity>
+      </View>
+    ),
+  });
+}, [isSearching, searchQuery, theme, navigation]);
+
 
  const options = [
         {
@@ -266,10 +385,12 @@ const ExpenceScreen = () => {
         {loading ? <ActivityIndicator style={styles.loading} animating={true} size='large' color={Colors[theme].secondaryButton} />
           : <ExpencesList
             expenceData={filteredList}
-            contentContainerStyle={styles.expenceCardContainer}
+            contentContainerStyle={{backgroundColor:Colors[theme].background}}
             articleStyle={{ color: theme === 'light' ? 'black' : 'white' }}
             titleStyle={{ color: theme === 'light' ? 'black' : 'white' }}
-           // refreshFetch={fetchExpences()}
+            refreshFetch={fetchExpences}
+            deleteExpense={deleteExpenseFromDB}
+            location='expenseScreen'
           />
         }
         <ActionButton options={options} />
@@ -357,7 +478,7 @@ const ExpenceScreen = () => {
             </TouchableOpacity>
             </BottomSheetModal>
         
-        <CalculatorModal Style={[{backgroundColor:theme==='light'?'white':'#E5E4E2',}]} />
+        <CalculatorModal Style={[{backgroundColor:theme==='light'?'white':'#E5E4E2',}]}  type='expense'/>
        </View>
 
     </>

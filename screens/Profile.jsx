@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useContext,useCallback } from 'react';
-import { View, Text, Alert, TextInput, TouchableOpacity, Image, ScrollView, StyleSheet, useWindowDimensions } from 'react-native';
+import { View, Text, Alert, TextInput, TouchableOpacity, Image, ScrollView, StyleSheet, useWindowDimensions,ActivityIndicator } from 'react-native';
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import { useNavigation, useFocusEffect,CommonActions } from '@react-navigation/native';
 import { Colors } from '../constants/Colors';
@@ -8,6 +8,8 @@ import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getData, storeData } from '../helpers/AsynchOperation';
 import {Picker} from '@react-native-picker/picker';
+import {ip} from '../constants/IPAdress.js';
+
 
 const Profile = () => {
   const navigation = useNavigation();
@@ -33,6 +35,7 @@ const Profile = () => {
   const [isPasswordFocused, setIsPasswordFocused] = useState(false);
   const [isNewPasswordFocused, setIsNewPasswordFocused] = useState(false);
   const [isConfirmPasswordFocused, setIsConfirmPasswordFocused] = useState(false);
+  const [isPageLoading, setIsPageLoading] = useState(true);
 
   const handleBlurPass = (password = '', setError) => {
     if (password.trim().length < 6 && password.trim().length > 0) {
@@ -55,7 +58,7 @@ const Profile = () => {
         return;
       }
   
-      const response = await fetch('http://192.168.11.102:5000/api/update-password', {
+      const response = await fetch(`http://${ip}:5000/api/update-password`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -92,7 +95,7 @@ const Profile = () => {
   const verifyPassword = async () => {
     try {
       const userToken = await getData('userToken');
-      const response = await fetch('http://192.168.11.102:5000/api/verify-password', {
+      const response = await fetch(`http://${ip}:5000/api/verify-password`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -145,7 +148,7 @@ const Profile = () => {
         return;
       }
 
-      const response = await fetch('http://192.168.11.102:5000/api/update-profile', {
+      const response = await fetch(`http://${ip}:5000/api/update-profile`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -235,6 +238,7 @@ const Profile = () => {
           setLastName(token.user?.lastname || '');
           setEmail(token.user.email || '');
           setGender(token.user?.gender || '');
+          setIsPageLoading(false);
         }
       } catch (error) {
         console.error('Error fetching user token:', error);
@@ -253,7 +257,7 @@ const Profile = () => {
   const checkHasPassword = async () => {
     try {
       const userToken = await getData('userToken');
-      const response = await fetch('http://192.168.11.102:5000/api/checkPassword', {
+      const response = await fetch(`http://${ip}:5000/api/checkPassword`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -320,48 +324,59 @@ const Profile = () => {
   });
 
   return (
+
+    isPageLoading ? 
+    <View style={[styles.container, { backgroundColor: Colors[theme].background , justifyContent: 'center', alignItems: 'center'}]}>
+      <ActivityIndicator size="large" color={Colors[theme].secondaryButton} />
+
+    </View>
+      :
+    
     <ScrollView style={[styles.container, { backgroundColor: Colors[theme].background }]} showsVerticalScrollIndicator={false}>
       {/* Profile Section */}
-      <View style={styles.profileHeader}>
-        <Image
-          style={[styles.profileImage, { width: width * 0.26, height: width * 0.26, borderRadius: width * 0.13 }]}
-          source={userToken?.user?.image ? { uri: userToken.user.image } : require('../assets/images/profile-pic.jpg')}
-        />
-        
-        <View style={styles.profileInfo}>
-          <View style={styles.profileName}>
-            <Text style={labelStyle}>First name</Text>
-            <TextInput
-              style={inputStyle(isFirstNameFocused)}
-              value={firstName}
-              editable={true}
-              selectionColor='lightblue'  
-              onChangeText={setFirstName}
-               keyboardType="default"
-               onFocus={() => setIsFirstNameFocused(true)}
-               onBlur={() => setIsFirstNameFocused(false)}
-            />
-             {!firstName.trim().length && <Text style={{ color: 'red', fontSize:width*0.03 , fontStyle: 'italic',fontFamily: 'Poppins-Regular' }}>*required field</Text>}
-          </View>
-
-          <View style={styles.profileName}>
-            <Text style={labelStyle}>Last name</Text>
-            <TextInput
-              style={inputStyle(isLastNameFocused)}
-              value={lastName}
-              editable={true}
-              selectionColor='lightblue'  
-              onChangeText={setLastName}
-              keyboardType="default"
-              onFocus={() => setIsLastNameFocused(true)}
-              onBlur={() => setIsLastNameFocused(false)}
-            />
-            {!lastName.trim().length && <Text style={{ color: 'red', fontSize:width*0.03 , fontStyle: 'italic',fontFamily: 'Poppins-Regular' }}>*required field</Text>}
+      
+        <View style={styles.profileHeader}>
+          <Image
+            style={[styles.profileImage, { width: width * 0.26, height: width * 0.26, borderRadius: width * 0.13 }]}
+            source={userToken?.user?.image ? { uri: userToken.user.image } : require('../assets/images/profile-pic.jpg')}
+          />
+  
+          <View style={styles.profileInfo}>
+            {/* First Name Input */}
+            <View style={styles.profileName}>
+              <Text style={labelStyle}>First name</Text>
+              <TextInput
+                style={inputStyle(isFirstNameFocused)}
+                value={firstName}
+                editable
+                selectionColor='lightblue'
+                onChangeText={setFirstName}
+                keyboardType="default"
+                onFocus={() => setIsFirstNameFocused(true)}
+                onBlur={() => setIsFirstNameFocused(false)}
+              />
+              {!firstName.trim().length && <Text style={{ color: 'red', fontSize: width * 0.03, fontStyle: 'italic', fontFamily: 'Poppins-Regular' }}>*required field</Text>}
+            </View>
+  
+            {/* Last Name Input */}
+            <View style={styles.profileName}>
+              <Text style={labelStyle}>Last name</Text>
+              <TextInput
+                style={inputStyle(isLastNameFocused)}
+                value={lastName}
+                editable
+                selectionColor='lightblue'
+                onChangeText={setLastName}
+                keyboardType="default"
+                onFocus={() => setIsLastNameFocused(true)}
+                onBlur={() => setIsLastNameFocused(false)}
+              />
+              {!lastName.trim().length && <Text style={{ color: 'red', fontSize: width * 0.03, fontStyle: 'italic', fontFamily: 'Poppins-Regular' }}>*required field</Text>}
+            </View>
           </View>
         </View>
-      </View>
-
-      {/* User Info */}
+  
+      {/* User Info Section */}
       <View style={styles.inputSection}>
         <View style={styles.userInfo}>
           <Text style={labelStyle}>Email</Text>
@@ -371,29 +386,34 @@ const Profile = () => {
             editable={false}
           />
         </View>
-
+  
+        {/* Gender Picker */}
         <View style={styles.userInfo}>
           <Text style={labelStyle}>Select gender</Text>
           <Picker
             selectedValue={gender}
             onValueChange={(itemValue) => setGender(itemValue)}
-            style={inputStyle}
+            style={[inputStyle]}
             mode="dropdown"
+            dropdownIconColor={theme === 'light' ? '#888' : 'lightblue'}
+            p
+          
+
           >
             <Picker.Item label="None" value="N" />
             <Picker.Item label="Male" value="M" />
             <Picker.Item label="Female" value="F" />
-           
-          </Picker> 
+          </Picker>
         </View>
-
+  
         {/* Logout Button */}
         <TouchableOpacity style={styles.logoutButton} onPress={signOut}>
           <Text style={[styles.saveText, { fontSize: width * 0.04 }]}>LOGOUT</Text>
         </TouchableOpacity>
-
-        {/* Password Change */}
+  
+        {/* Password Change Section */}
         <Text style={[styles.sectionTitle, { fontSize: width * 0.048, fontFamily: 'Poppins-SemiBold', color: Colors[theme].header }]}>PASSWORD CHANGE</Text>
+        
         <View style={styles.userInfo}>
           <TextInput
             style={[inputStyle(isPasswordFocused)]}
@@ -401,14 +421,14 @@ const Profile = () => {
             placeholderTextColor='rgba(136, 136, 136, 0.3)'
             secureTextEntry
             value={password}
-            selectionColor='lightblue'  
+            selectionColor='lightblue'
             onFocus={() => setIsPasswordFocused(true)}
             onChangeText={setPassword}
-            onBlur={() => {handleBlurPass(password, setErrorPass); setIsPasswordFocused(false);}}
+            onBlur={() => { handleBlurPass(password, setErrorPass); setIsPasswordFocused(false); }}
           />
           {errorPass.length > 0 && <Text style={[styles.error, { fontSize: width * 0.03 }]}>{errorPass}</Text>}
         </View>
-
+  
         {/* New Password Input - Conditional Rendering */}
         {hasPass && (
           <View style={styles.userInfo}>
@@ -418,15 +438,15 @@ const Profile = () => {
               placeholderTextColor='rgba(136, 136, 136, 0.3)'
               secureTextEntry
               value={newPassword}
-              selectionColor='lightblue'  
+              selectionColor='lightblue'
               onChangeText={setNewPassword}
               onFocus={() => setIsNewPasswordFocused(true)}
-              onBlur={() => {handleBlurPass(newPassword, setErrorNewPass); setIsNewPasswordFocused(false);}}
+              onBlur={() => { handleBlurPass(newPassword, setErrorNewPass); setIsNewPasswordFocused(false); }}
             />
             {errorNewPass.length > 0 && <Text style={[styles.error, { fontSize: width * 0.03 }]}>{errorNewPass}</Text>}
           </View>
         )}
-
+  
         <View style={styles.userInfo}>
           <TextInput
             style={inputStyle(isConfirmPasswordFocused)}
@@ -434,23 +454,21 @@ const Profile = () => {
             placeholderTextColor='rgba(136, 136, 136, 0.3)'
             secureTextEntry
             value={confirmPassword}
-            selectionColor='lightblue'  
+            selectionColor='lightblue'
             onChangeText={setConfirmPassword}
             onFocus={() => setIsConfirmPasswordFocused(true)}
-            onBlur={() =>{if(confirmPassword.length==0) 
-                            setErrorConfirmedPass('')
-                          setIsConfirmPasswordFocused(false)
-                          }}
+            onBlur={() => { if (confirmPassword.length === 0) setErrorConfirmedPass(''); setIsConfirmPasswordFocused(false); }}
           />
           {errorConfirmedPass.length > 0 && <Text style={[styles.error, { fontSize: width * 0.03 }]}>{errorConfirmedPass}</Text>}
         </View>
-
+  
         <TouchableOpacity style={[styles.logoutButton, { backgroundColor: Colors[theme].secondaryButton }]} onPress={changePassword}>
           <Text style={[styles.saveText, { fontSize: width * 0.04 }]}>CHANGE PASSWORD</Text>
         </TouchableOpacity>
       </View>
     </ScrollView>
   );
+  
 };
 
 export default Profile;

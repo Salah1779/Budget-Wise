@@ -1,14 +1,19 @@
 import { View, Text ,Dimensions,TouchableOpacity,StyleSheet} from 'react-native'
 import React,{useState,useCallback, useEffect,useContext} from 'react'
-import { ThemeContext } from '../context/ThemeContext'
+import { ThemeContext } from '../context/ThemeContext';
 import Calculator from './Calculator';
 import CustomModal from './CustomModal';
 import { Colors } from '../constants/Colors';
+import { BudgetContext } from '../context/CalculContext';
+import { ExpenseContext } from '../context/CalculContext';
 
 const {width}= Dimensions.get('window');
-const CalculatorModal = ({Style={}}) => {
+const CalculatorModal = ({Style={} , type='budget'}) => {
 
-    const { theme ,result,setResult,expression,setExpression,showCalculator,setShowCalculator } = useContext(ThemeContext);
+    const { theme } = useContext(ThemeContext);
+  
+      const {result,setResult,expression,setExpression,showCalculator,setShowCalculator}=useContext(type==='budget'? BudgetContext:ExpenseContext);
+   
 
    
     
@@ -30,9 +35,9 @@ const CalculatorModal = ({Style={}}) => {
   return (
     <CustomModal visible={showCalculator} onClose={() => setShowCalculator(false)}    modalStyle={Style}  >
 
-            <Calculator />
+            <Calculator type={type} />
                 <View style={[styles.buttonContainer,{flex:0.2}]}>
-                  <TouchableOpacity  onPress={()=>{ setExpression('')}}>
+                  <TouchableOpacity  onPress={()=>{ setExpression('');}}>
                     <Text style={[styles.textModal,{color:Colors[theme].secondaryButton}]}>CLEAR</Text>
                   </TouchableOpacity>
                   <TouchableOpacity style={styles.buttonModal}  onPress={retrieveResult}>

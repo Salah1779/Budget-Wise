@@ -1,31 +1,30 @@
 import React, { createContext, useState, useEffect } from 'react';
 import { Appearance } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { storeData, getData } from '../helpers/AsynchOperation'; // Ensure getData is imported correctly
+
 
 
 export const ThemeContext = createContext();
 
 export const AppProvider = ({ children }) => {
- // const systemTheme = useColorScheme(); // Get the current system theme
+ 
   const [theme, setTheme] = useState('light'); // Initialize theme state
   const [systemChosen, setSystemChosen] = useState(false);
-  const [result, setResult] = useState(0);
-  const [expression, setExpression] = useState('');
+ 
   const [currency, setCurrency] = useState('');
-  const [expenceList, setExpenceList] = useState([]);
-  const [filteredList, setFilteredList] = useState([]);
+
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearching, setIsSearching] = useState(false);
- const [toggle, setToggle] = useState(false);
- const [showCalculator, setShowCalculator] = useState(false);
+  const [toggle, setToggle] = useState(false);
+  const [expenceList, setExpenceList] = useState([]);
+
 
 
 
  // Function to get system theme (light or dark)
  const getSystemTheme = () => {
    const colorScheme = Appearance.getColorScheme();
-   return colorScheme === 'dark' ? 'dark' : 'light'; // You can adjust this if using custom themes
+   return colorScheme === 'dark' ? 'dark' : 'light'; 
  };
 
 
@@ -76,17 +75,13 @@ useEffect(() => {
 
   return (
     <ThemeContext.Provider 
-     value={{ theme, setTheme,
-      expenceList,setExpenceList,
-      filteredList,setFilteredList,
-      expression,setExpression,
-      result,setResult,
+     value={{ theme, setTheme,    
       currency,setCurrency ,
       searchQuery,setSearchQuery,
       isSearching,setIsSearching,
       toggle,setToggle,
-      showCalculator,setShowCalculator,
-      systemChosen,setSystemChosen
+      systemChosen,setSystemChosen,
+      expenceList,setExpenceList
       }}
     >
       {children}

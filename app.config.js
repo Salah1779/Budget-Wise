@@ -5,7 +5,7 @@ export default {
     slug: "mobApp",
     version: "1.0.0",
     orientation: "default",
-    icon: "./assets/logo.png",
+    icon: "./assets/logoOffice.png",
     userInterfaceStyle: "light",
     splash: {
       image: "./assets/splash.png",

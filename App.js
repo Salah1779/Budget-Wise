@@ -80,7 +80,10 @@ function AppContent() {
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: Colors[theme].background }]}>
       <Stack.Navigator
-      initialRouteName={isPinEnabled && appState === 'killed' ? 'Pin' : 'SplashScreen'}>
+      initialRouteName={isPinEnabled && appState === 'killed' ? 'Pin' : 'SplashScreen'}
+      
+      
+      >
         <Stack.Screen
           name="SplashScreen"
           component={SplashScreen}
@@ -104,7 +107,12 @@ function AppContent() {
         <Stack.Screen
           name="Login"
           component={Login}
-          options={{ headerShown: false }}
+          options={{ headerShown: false,animation:'fade_from_bottom',
+               
+           }
+          
+            
+           }
         />
         <Stack.Screen
           name="ChooseCurrency"

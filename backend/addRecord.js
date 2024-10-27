@@ -97,8 +97,11 @@ router.post('/categories', (req, res) => {
                 SELECT id_user
                 FROM users
                 WHERE email = ?
+                AND NOW() < ADDDATE(budget_start_date, INTERVAL 1 MONTH) 
+                AND budget_date BETWEEN budget_start_date AND ADDDATE(budget_start_date, INTERVAL 1 MONTH) 
+
             )
-            AND DATE_FORMAT(budget_date, '%m') = DATE_FORMAT(NOW(), '%m')
+            
         )
     `;
 
@@ -118,13 +121,11 @@ router.post('/categories', (req, res) => {
 });
 
 
-router.post('/budget-list', verifyToken, async (req, res) => 
-{
+router.post('/budget-list', verifyToken, async (req, res) => {
     const email = req.user.email;
-   
+
     // Extract the token from the Authorization header
     const token = req.headers['authorization'].split(' ')[1];
-
 
     try {
         // First query to get user ID
@@ -140,14 +141,26 @@ router.post('/budget-list', verifyToken, async (req, res) =>
                 // If no user is found
                 return res.status(404).json({ error: 'User not found' });
             }
-          
-            const queryBudgets= 'SELECT id_budget ,cat, amount FROM budgets natural join category WHERE id_user = ? AND budget_date <=DATE_ADD(budget_date, INTERVAL 1 MONTH)';
+
+            // Corrected query
+            const queryBudgets = `
+            SELECT id_budget, cat, amount 
+            FROM budgets 
+            NATURAL JOIN category 
+            NATURAL JOIN users 
+            WHERE id_user = ? 
+              AND NOW() < ADDDATE(budget_start_date, INTERVAL 1 MONTH) 
+              AND budget_date BETWEEN budget_start_date AND ADDDATE(budget_start_date, INTERVAL 1 MONTH)
+        `;
+        
+
             connection.query(queryBudgets, [userResults[0].id_user], (err, results) => {
                 if (err) {
                     console.error('Error querying the database for budget:', err);
                     res.setHeader('Content-Type', 'application/json'); // Set content type to JSON
                     return res.status(500).json({ error: err });
                 }
+                
                 res.setHeader('Content-Type', 'application/json'); // Set content type to JSON
                 const obj = {
                     user: {
@@ -155,20 +168,18 @@ router.post('/budget-list', verifyToken, async (req, res) =>
                         name: userResults[0].name,
                         lastname: userResults[0].lastname,
                         image: userResults[0].image,
-                        gender:userResults[0].gender
+                        gender: userResults[0].gender
                     },
                     token
-                }
-                return res.status(200).json({ data: results , user:obj});
+                };
+                
+                return res.status(200).json({ data: results, user: obj });
             });
-        });  
-    
-    }
-    catch(error) {
+        });
+    } catch (error) {
         console.error('Error getting user:', error);
-        res.status(500).json({ error: err});
+        res.status(500).json({ error });
     }
-
 });
 
 
@@ -309,6 +320,52 @@ router.post('/expence-list', verifyToken, async (req, res) =>
     
     });
 
+router.delete('/delete-expence', verifyToken, (req, res) => {
+    console.log("Endpoint backend entered");
+    
+    // Log the request body to debug the ID
+    console.log('Request body:', req.body);
+
+    const { id } = req.body;
+
+    // Check if the ID is provided
+    if (!id) {
+        return res.status(400).json({ error: 'Expense ID is required' });
+    }
+
+    // Extract the token from Authorization header
+    const token = req.headers['authorization']?.split(' ')[1];
+
+    // Check if token is valid
+    if (!token) {
+        return res.status(401).json({ error: 'Invalid token' });
+    }
+
+    try {
+        connection.query('DELETE FROM expences WHERE id_expence = ?', [id], (err, results) => {
+            if (err) {
+                console.error('Error deleting data:', err);
+                res.setHeader('Content-Type', 'application/json'); // Set content type to JSON
+                return res.status(500).json({ error: 'Internal server error' });
+            }
+
+            // If no rows were affected, it means the ID wasn't found
+            if (results.affectedRows === 0) {
+                return res.status(404).json({ error: 'No expense found with this ID' });
+            }
+
+            // Return success message along with token
+            res.setHeader('Content-Type', 'application/json'); // Set content type to JSON
+            return res.status(200).json({ message: 'Data deleted successfully', token });
+        });
+    } catch (error) {
+        console.error('Error deleting data:', error);
+        res.setHeader('Content-Type', 'application/json'); // Set content type to JSON
+        return res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+    
 
 
 module.exports = router;    
