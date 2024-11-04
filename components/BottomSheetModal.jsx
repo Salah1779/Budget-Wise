@@ -53,10 +53,9 @@ const BottomSheetModal = ({ isVisible, onClose, children, SheetHeight =height*0.
     >
       <GestureDetector gesture={panGesture}>
         <Animated.View style={[styles.sheetContainer, { height: sheetHeight }, animatedStyle, { backgroundColor: Colors[theme].background }]}>
-          <ScrollView contentContainerStyle={styles.contentContainer}>
+         
             {children}
            
-          </ScrollView>
         </Animated.View>
       </GestureDetector>
     </Modal>
@@ -72,8 +71,6 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     overflow: 'hidden',
-  },
-  contentContainer: {
     padding: 20,
   },
   button: {

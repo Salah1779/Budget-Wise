@@ -1,50 +1,96 @@
 import React, { useContext, useEffect, useState, useCallback ,useMemo} from 'react';
 import {
-  Button,
   StyleSheet,
   Text,
   View,
-  useWindowDimensions,
-  Image,
   TouchableOpacity,
   FlatList,
   Platform,
-  Switch,
   TextInput,
   Dimensions,
   Alert,
   ActivityIndicator,
   Animated,
-  LayoutAnimation
+  LayoutAnimation,
+
 } from 'react-native';
 
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { Colors } from '../constants/Colors';
-import LinearGradient from 'react-native-linear-gradient';
 import CustomizedStatusBar from '../components/CustomizedStatusBar';
 import BottomSheetModal from '../components/BottomSheetModal';
-import CustomModal from '../components/CustomModal';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getData, storeData } from '../helpers/AsynchOperation';
-import Icon from 'react-native-vector-icons/FontAwesome';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import ExpencesList from '../components/ExpencesList';
-import Calculator from '../components/Calculator';
 import { clamp } from 'react-native-reanimated';
 import ActionButton from '../components/ActionButton';
 import { Picker } from '@react-native-picker/picker';
 import CalculatorModal from '../components/CalculatorModal';
-
-
 import { ThemeContext } from '../context/ThemeContext';
 import { ExpenseContext } from '../context/CalculContext';
 import {ip} from '../constants/IPAdress'
 
 const { width, height } = Dimensions.get('window');
 
+//categories filter
+const categories = [
+  'All',
+  'Food & Drinks',
+  'Vehicle',
+  'Housing',
+  'Transportation',
+  'Health',
+  'Entertainment',
+  'Investment',
+  'Other',
+  'Financial Expenses',
+  'Shopping'
+];
 
-
+const expenses_example = [
+  {
+    id: 1,
+    category: 'Food & Drinks',
+    article: 'Burger',
+    price: 80,
+  },
+  {
+    id: 2,
+    category: 'Health',
+    article: 'Panadol medecine',
+    price: 100,
+  },
+  {
+    id: 3,
+    category: 'Other',
+    article: 'Pet crockets',
+    price: 80,
+  },
+  {
+    id: 4,
+    category: 'Entertainment',
+    article: 'Fifa 25',
+    price: 800,
+  },
+  {
+    id: 5,
+    category: 'Housing',
+    article: 'Apartment',
+    price: 800,
+  },
+  {
+    id: 6,
+    category: 'Housing',
+    article: 'House',
+    price: 800,
+  },
+  {
+    id: 7,
+    category: 'Housing',
+    article: 'House',
+    price: 800,
+  }
+]
 const ExpenceScreen = () => {
   const navigation = useNavigation();
   const { theme, currency,
@@ -68,25 +114,35 @@ const ExpenceScreen = () => {
   const [article, setArticle] = useState('');
   const [loadingAdd, setLoadingAdd] = useState(false);
   const [initialFilter, setInitialFilter] = useState([]);
-  
-
-//categories filter
-  const categories = [
-    'All',
-    'Food & Drinks',
-    'Vehicle',
-    'Housing',
-    'Transportation',
-    'Health',
-    'Entertainment',
-    'Investment',
-    'Other',
-    'Financial Expenses',
-    'Shopping'
-  ];
-
+  const [categoriesList , setCategoriesList] = useState([]);
+  const [articles, setArticles] = useState([]);
+  const [amounts, setAmounts] = useState([]);
+  const [modalImport, setModalImport] = useState(true);
  
+  useEffect(() => {
+    if (!modalImport) return;
   
+    const fill_expenseList = () => {
+      const newCategories = [];
+      const newArticles = [];
+      const newAmounts = [];
+  
+      expenses_example.forEach(item => {
+        newCategories.push(item.category);
+        newArticles.push(item.article);
+        newAmounts.push(item.price);
+      });
+  
+      // Update the state
+      setCategoriesList(prevState => [...prevState, ...newCategories]);
+      setArticles(prevState => [...prevState, ...newArticles]);
+      setAmounts(prevState => [...prevState, ...newAmounts]);
+    };
+  
+    fill_expenseList();
+  }, [modalImport]);
+  
+ 
   closeModal = () => {
     setIsModalVisible(false);
   }
@@ -305,6 +361,7 @@ useEffect(() => {
 }, [isSearching, searchQuery, theme, navigation]);
 
 
+
  const options = [
         {
             id: 1,
@@ -327,7 +384,9 @@ useEffect(() => {
       
     ];
 
-
+   const handleCancel=(index)=>{
+     expenses_example.splice(index, 1);
+   }
 
   const renderItem = ({ item }) => {
     const isSelected = item === selectedCategory;
@@ -476,7 +535,114 @@ useEffect(() => {
                             }} >
                 <Text style={styles.buttonText}>Done{' '} {loadingAdd && <ActivityIndicator size="small" color="white" />}</Text>
             </TouchableOpacity>
-            </BottomSheetModal>
+        </BottomSheetModal>
+
+        <BottomSheetModal isVisible={modalImport} onClose={()=>setModalImport(false)} SheetHeight={height*0.9}>
+        <FlatList
+          style={{ flex: 1 }}
+          scrollEnabled
+          showsVerticalScrollIndicator={false}
+          data={expenses_example}
+          keyExtractor={(item, index) => index.toString()}
+          renderItem={({ item, index }) => (
+            <View
+            style={{
+              flexDirection: 'column',
+              flex: 1,
+              marginBottom: 20,
+            
+            }}
+          >
+                   
+                
+                 <View style={{ flexDirection: 'row-reverse', alignItems: 'center', justifyContent: 'space-between' }}>
+                 <View style={{ width: width * 0.4 }}>
+                    <Text style={[styles.label, { color: theme === 'light' ? '#888' : 'lightgrey', marginBottom: 0 }]}>Category</Text>
+                    <Picker
+                
+                        selectedValue={categoriesList[index]}
+                        onValueChange={(value) => setCategoriesList(prevCategoriesList => [...prevCategoriesList.slice(0, index), value, ...prevCategoriesList.slice(index + 1)])}
+                        style={[styles.picker, { color: theme === 'light' ? '#004' : 'lightgrey' }]}
+                        mode="dropdown"
+                        dropdownIconColor={theme === 'light' ? 'lightblue' : 'lightgrey'}
+                        dropdownIconRippleColor={theme === 'light' ? 'lightblue' : 'lightgrey'}
+                        ItemSeparatorComponent={() => <View style={{ height: 1, width: '80%', backgroundColor: 'gray' }} />}
+                        selectionColor={theme === 'light' ? 'lightblue' : 'lightgrey'}
+                    >
+                        <Picker.Item label="Select a category" value="" />
+                        {categories.map((category, index) => {
+                            if (index > 0) {
+                                return (
+                                    <Picker.Item key={index} label={category} value={category} />
+                                );
+                            }
+                            return null; // Return null if index is 0 or less
+                        })}
+                    </Picker>
+                </View>
+
+                <View>
+                    <Text style={[styles.label, { color: theme === 'light' ? '#888' : 'lightgrey' }]}>Amount</Text>
+                    
+                        <TextInput
+                            style={[styles.input, { color: theme === 'light' ? '#004' : 'lightgrey' }]}
+                            placeholder="Enter expense amount"
+                            keyboardType="numeric"
+                            placeholderTextColor={theme === 'light' ? 'grey' : 'darkgrey'}
+                            value={amounts[index]?.toString() || ''} 
+                            onChangeText={(price) => setAmounts(prevAmounts => [...prevAmounts.slice(0, index), parseFloat(price), ...prevAmounts.slice(index + 1)])}
+                            editable={true}
+                        />
+                    
+                </View>
+                 </View>
+
+                <View>
+                    <Text style={[styles.label, { color: theme === 'light' ? '#888' : 'lightgrey' }]}>Article</Text>
+                    <TextInput
+                        style={[styles.input, { color: theme === 'light' ? '#004' : 'lightgrey' }]}
+                        placeholder="set an article..."
+                        placeholderTextColor={theme === 'light' ? 'grey' : 'darkgrey'}
+                        value={articles[index]}
+                        onChangeText={(text) => setArticles(prevArticles => [...prevArticles.slice(0, index), text, ...prevArticles.slice(index + 1)])} // Update the articles array with the new value(text)}
+                        multiline={true}
+                        editable={false}
+                    />
+                </View>
+
+                <TouchableOpacity onPress={() => handleCancel(index)} style={styles.cancelButton}>
+                  <Ionicons name="trash-outline" size={24} color="white" />
+                </TouchableOpacity>
+              </View>
+          )}
+         
+          ListFooterComponent={
+            <TouchableOpacity style={[styles.button, {backgroundColor:loadingAdd ? 'gray' : Colors[theme].primaryButton},
+                Platform.select({
+              ios: theme === 'light' ? {
+                shadowColor: '#ccc',
+                shadowOffset: { width: 0, height: 2 },
+                shadowOpacity: 0.25,
+                shadowRadius: 3.84,
+              } : {},
+              android: {
+                elevation: theme === 'light' ? 5 : 0,
+              },
+            }),]}
+            onPress={() => {
+                           // console.log(result , article , category); 
+                          
+                           // addExpenceToDB()
+                            //fetchExpences();
+                          
+                            }} >
+             <Text style={styles.buttonText}>Done{' '} {loadingAdd && <ActivityIndicator size="small" color="white" />}</Text>
+         </TouchableOpacity>
+          }
+        />
+  
+ 
+        </BottomSheetModal>
         
         <CalculatorModal Style={[{backgroundColor:theme==='light'?'white':'#E5E4E2',}]}  type='expense'/>
        </View>
@@ -573,5 +739,17 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontFamily: 'Poppins-Regular',
 
+  },
+  cancelButton: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    width : width*0.8,
+    backgroundColor: '#e74c3c',
+    margin:'auto',
+    borderRadius: 50,
+    paddingVertical: 5,
+    
+    
   },
 });

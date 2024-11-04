@@ -24,8 +24,6 @@ import { ThemeContext } from '../context/ThemeContext';
 import {BudgetContext } from '../context/CalculContext';
 import CustomizedStatusBar from '../components/CustomizedStatusBar';
 import BottomSheetModal from '../components/BottomSheetModal';
-import CustomModal from '../components/CustomModal';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import {getData, storeData} from '../helpers/AsynchOperation';
 import Icon from 'react-native-vector-icons/FontAwesome'; 
 import ExpencesList from '../components/ExpencesList';
@@ -440,7 +438,7 @@ const pickerItemStyle = {
             ListHeaderComponent={() =>
               budget.length === 0 ? null : (
                 <TouchableOpacity
-                  style={[styles.listHeader, { borderColor: theme === 'light' ? 'black' : 'lightgrey' }]}
+                  style={[styles.listHeader, { borderColor: theme === 'light' ? 'black' : 'red' }]}
                   onPress={()=>{ 
                      if (allbudgetsAdded) {
                       Alert.alert('Oups!', 'You added all the budget categories for this month!');
@@ -452,7 +450,7 @@ const pickerItemStyle = {
                   }
                 >
                   <Icon
-                    name="plus-circle"
+                    name=""
                     size={width > 400 ? 34 : 30}
                     color={theme === 'light' ? 'black' : 'lightgrey'}
                   />
@@ -462,13 +460,13 @@ const pickerItemStyle = {
             horizontal
             ListEmptyComponent={() => (
               <TouchableOpacity
-              style={[styles.listHeader, styles.emptyList, { borderColor: theme === 'light' ? 'white' : 'lightgrey', width: 100 }]}
+              style={[styles.listHeader, styles.emptyList, { borderColor: theme === 'light' ? 'black' : 'lightgrey', width: 100 }]}
                onPress={() => setIsModalVisible(true)}
               >
                 <Icon
                   name="plus-circle"
                   size={width > 400 ? 34 : 30}
-                  color={theme === 'light' ? 'white' : 'lightgrey'}
+                  color={theme === 'light' ? 'blacka' : 'lightgrey'}
                 />
               </TouchableOpacity>
             )}

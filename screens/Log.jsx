@@ -24,9 +24,9 @@ export default function Log() {
         const valueToStore = launch === null ? false : true;
         if(!valueToStore) storeData("currency", valueToStore);
         setFirstCurrency(valueToStore);
-        console.log("setcurrency", valueToStore);
+        console.log("currency", valueToStore);
       } catch (e) {
-        console.error('Error retrieving Finish:', e);
+        console.error('Error retrieving  currency:', e);
       }
     };
 
